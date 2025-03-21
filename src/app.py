@@ -6,7 +6,155 @@ Application principale Flask pour le générateur de QR codes personnalisé.
 Ce module fournit l'interface web pour interagir avec les modules de génération,
 personnalisation et exportation de QR codes.
 """
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
+"""
+Application principale Flask pour le générateur de QR codes personnalisé.
+Ce module fournit l'interface web pour interagir avec les modules de génération,
+personnalisation et exportation de QR codes.
+"""
+
+import os
+import uuid
+from datetime import import datetime
+from flask import Flask, render_template, re#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""
+Application principale Flask pour le générateur de QR codes personnalisé.
+Ce module fournit l'interface web pour interagir avec les modules de génération,
+personnalisation et exportation de QR codes.
+"""
+
+import os
+import uuid
+from datetime import import datetime
+from flask import Flask, render_template, re#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""
+Application principale Flask pour le générateur de QR codes personnalisé.
+Ce module fournit l'interface web pour interagir avec les modules de génération,
+personnalisation et exportation de QR codes.
+"""
+
+import os
+import uuid
+from datetime import import datetime
+from flask import Flask, render_template, re#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""
+Application principale Flask pour le générateur de QR codes personnalisé.
+Ce module fournit l'interface web pour interagir avec les modules de génération,
+personnalisation et exportation de QR codes.
+"""
+
+import os
+import uuid
+from datetime import datetime
+from flask import Flask, render_template, request, jsonify, send_from_directory, url_for, redirect
+
+# Import des modules backend
+from src.backend.qr_generator.basic_generator import QRCodeGenerator
+from src.backend.customization.style_customizer import QRCodeCustomizer
+from src.backend.export.exporter import QRCodeExporter
+
+# Création de l'application Flask
+app = Flask(__name__,
+                        static_folder='frontend/static',
+                        template_folder='frontend/templates')
+
+@app.context_processor
+def inject_now():
+                return {'now': datetime.now()}
+            
+# Configuration de l'application
+app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
+app.config['GENERATED_FOLDER'] = os.path.join(os.getcwd(), 'generated_qrcodes')
+app.config['EXPORTED_FOLDER'] = os.path.join(os.getcwd(), 'exported_qrcodes')
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max upload size
+
+# Création des dossiers nécessaires s'ils n'existent pas
+for folder in [app.config['UPLOAD_FOLDER'], app.config['GENERATED_FOLDER'], app.config['EXPORTED_FOLDER']]:
+                if not os.path.exists(folder):
+                                    os.makedirs(folder)quest, jsonify, send_from_directory, url_for, redirect
+
+# Import des modules backend
+from src.backend.qr_generator.basic_generator import QRCodeGenerator
+from src.backend.customization.style_customizer import QRCodeCustomizer
+from src.backend.export.exporter import QRCodeExporter
+
+# Création de l'application Flask
+app = Flask(__name__,
+                        static_folder='frontend/static',
+                        template_folder='frontend/templates')
+
+@app.context_processor
+def inject_now():
+                return {'now': datetime.now()}
+            
+# Configuration de l'application
+app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
+app.config['GENERATED_FOLDER'] = os.path.join(os.getcwd(), 'generated_qrcodes')
+app.config['EXPORTED_FOLDER'] = os.path.join(os.getcwd(), 'exported_qrcodes')
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max upload size
+
+# Création des dossiers nécessaires s'ils n'existent pas
+for folder in [app.config['UPLOAD_FOLDER'], app.config['GENERATED_FOLDER'], app.config['EXPORTED_FOLDER']]:
+                if not os.path.exists(folder):
+                                    os.makedirs(folder)quest, jsonify, send_from_directory, url_for, redirect
+
+# Import des modules backend
+from src.backend.qr_generator.basic_generator import QRCodeGenerator
+from src.backend.customization.style_customizer import QRCodeCustomizer
+from src.backend.export.exporter import QRCodeExporter
+
+# Création de l'application Flask
+app = Flask(__name__,
+                        static_folder='frontend/static',
+                        template_folder='frontend/templates')
+
+@app.context_processor
+def inject_now():
+                return {'now': datetime.now()}
+            
+# Configuration de l'application
+app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
+app.config['GENERATED_FOLDER'] = os.path.join(os.getcwd(), 'generated_qrcodes')
+app.config['EXPORTED_FOLDER'] = os.path.join(os.getcwd(), 'exported_qrcodes')
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max upload size
+
+# Création des dossiers nécessaires s'ils n'existent pas
+for folder in [app.config['UPLOAD_FOLDER'], app.config['GENERATED_FOLDER'], app.config['EXPORTED_FOLDER']]:
+                if not os.path.exists(folder):
+                                    os.makedirs(folder)quest, jsonify, send_from_directory, url_for, redirect
+
+# Import des modules backend
+from src.backend.qr_generator.basic_generator import QRCodeGenerator
+from src.backend.customization.style_customizer import QRCodeCustomizer
+from src.backend.export.exporter import QRCodeExporter
+
+# Création de l'application Flask
+app = Flask(__name__,
+                        static_folder='frontend/static',
+                        template_folder='frontend/templates')
+
+@app.context_processor
+def inject_now():
+                return {'now': datetime.now()}
+
+# Configuration de l'application
+app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
+app.config['GENERATED_FOLDER'] = os.path.join(os.getcwd(), 'generated_qrcodes')
+app.config['EXPORTED_FOLDER'] = os.path.join(os.getcwd(), 'exported_qrcodes')
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max upload size
+
+# Création des dossiers nécessaires s'ils n'existent pas
+for folder in [app.config['UPLOAD_FOLDER'], app.config['GENERATED_FOLDER'], app.config['EXPORTED_FOLDER']]:
+                if not os.path.exists(folder):
+                                    os.makedirs(folder)
 import os
 import uuid
 from datetime import datetime
