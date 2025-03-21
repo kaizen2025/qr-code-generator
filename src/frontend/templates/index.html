@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Générateur de QR Codes Personnalisé | Anecoop-France</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fas fa-qrcode me-2"></i>Générateur de QR Codes
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('index') }}">Accueil</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('history') }}">Historique</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-lg-12 text-center mb-4">
+                <h1>Générateur de QR Codes Personnalisé</h1>
+                <p class="lead">Créez des QR codes uniques avec des options avancées de personnalisation</p>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-6">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <ul class="nav nav-tabs card-header-tabs" id="qrTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="basic-tab" data-bs-toggle="tab" data-bs-target="#basic" type="button" role="tab">Basique</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="custom-tab" data-bs-toggle="tab" data-bs-target="#custom" type="button" role="tab">Personnalisé</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="logo-tab" data-bs-toggle="tab" data-bs-target="#logo" type="button" role="tab">Logo</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="style-tab" data-bs-toggle="tab" data-bs-target="#style" type="button" role="tab">Style</button>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="card-body">
+                        <div class="tab-content" id="qrTabContent">
+                            <!-- Onglet QR Code Basique -->
+                            <div class="tab-pane fade show active" id="basic" role="tabpanel">
+                                <form id="basicForm" class="qr-form">
+                                    <input type="hidden" name="generation_type" value="basic">
+                                    
+                                    <div class="mb-3">
+                                        <label for="basicData" class="form-label">Contenu du QR Code</label>
+                                        <textarea class="form-control" id="basicData" name="data" rows="3" placeholder="URL, texte, coordonnées, etc." required></textarea>
+                                    </div>
+                                    
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="basicVersion" class="form-label">Version</label>
+                                            <select class="form-select" id="basicVersion" name="version">
+                                                <option value="1">Version 1 (21x21)</option>
+                                                <option value="2">Version 2 (25x25)</option>
+                                                <option value="3">Version 3 (29x29)</option>
+                                                <option value="4">Version 4 (33x33)</option>
+                                                <option value="5">Version 5 (37x37)</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="basicErrorCorrection" class="form-label">Correction d'erreur</label>
+                                            <select class="form-select" id="basicErrorCorrection" name="error_correction">
+                                                <option value="0">Faible (L)</option>
+                                                <option value="1">Moyenne (M)</option>
+                                                <option value="2">Quartile (Q)</option>
+                                                <option value="3" selected>Haute (H)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="basicBoxSize" class="form-label">Taille des modules</label>
+                                            <input type="range" class="form-range" id="basicBoxSize" name="box_size" min="5" max="20" value="10">
+                                            <div class="text-center"><span id="basicBoxSizeValue">10</span> pixels</div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="basicBorder" class="form-label">Bordure</label>
+                                            <input type="range" class="form-range" id="basicBorder" name="border" min="0" max="10" value="4">
+                                            <div class="text-center"><span id="basicBorderValue">4</span> modules</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="d-grid">
+                                        <button type="submit" class="btn btn-primary">Générer le QR Code</button>
+                                    </div>
+                                </form>
+                            </div>
+                            
+                            <!-- Onglet QR Code Personnalisé -->
+                            <div class="tab-pane fade" id="custom" role="tabpanel">
+                                <form id="customForm" class="qr-form">
+                                    <input type="hidden" name="generation_type" value="custom">
+                                    
+                                    <div class="mb-3">
+                                        <label for="customData" class="form-label">Contenu du QR Code</label>
+                                        <textarea class="form-control" id="customData" name="data" rows="3" placeholder="URL, texte, coordonnées, etc." required></textarea>
+                                    </div>
+                                    
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="customVersion" class="form-label">Version</label>
+                                            <select class="form-select" id="customVersion" name="version">
+                                                <option value="1">Version 1 (21x21)</option>
+                                                <option value="2">Version 2 (25x25)</option>
+                                                <option value="3">Version 3 (29x29)</option>
+                                                <option value="4">Version 4 (33x33)</option>
+                                                <option value="5">Version 5 (37x37)</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="customErrorCorrection" class="form-label">Correction d'erreur</label>
+                                            <select class="form-select" id="customErrorCorrection" name="error_correction">
+                                                <option value="0">Faible (L)</option>
+                                                <option value="1">Moyenne (M)</option>
+                                                <option value="2">Quartile (Q)</option>
+                                                <option value="3" selected>Haute (H)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="customFillColor" class="form-label">Couleur des modules</label>
+                                            <input type="color" class="form-control form-control-color w-100" id="customFillColor" name="fill_color" value="#000000">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="customBackColor" class="form-label">Couleur d'arrière-plan</label>
+                                            <input type="color" class="form-control form-control-color w-100" id="customBackColor" name="back_color" value="#FFFFFF">
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="customBoxSize" class="form-label">Taille des modules</label>
+                                            <input type="range" class="form-range" id="customBoxSize" name="box_size" min="5" max="20" value="10">
+                                            <div class="text-center"><span id="customBoxSizeValue">10</span> pixels</div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="customBorder" class="form-label">Bordure</label>
+                                            <input type="range" class="form-range" id="customBorder" name="border" min="0" max="10" value="4">
+                                            <div class="text-center"><span id="customBorderValue">4</span> modules</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="d-grid">
+                                        <button type="submit" class="btn btn-primary">Générer le QR Code</button>
+                                    </div>
+                                </form>
+                            </div>
+                            
+                            <!-- Onglet QR Code avec Logo -->
+                            <div class="tab-pane fade" id="logo" role="tabpanel">
+                                <form id="logoForm" class="qr-form" enctype="multipart/form-data">
+                                    <input type="hidden" name="generation_type" value="logo">
+                                    
+                                    <div class="mb-3">
+                                        <label for="logoData" class="form-label">Contenu du QR Code</label>
+                                        <textarea class="form-control" id="logoData" name="data" rows="3" placeholder="URL, texte, coordonnées, etc." required></textarea>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="logoFile" class="form-label">Logo</label>
+                                        <input class="form-control" type="file" id="logoFile" name="logo" accept="image/*" required>
+                                        <div class="form-text">Format recommandé : PNG avec transparence, carré</div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="logoSize" class="form-label">Taille du logo</label>
+                                        <input type="range" class="form-range" id="logoSize" name="logo_size" min="0.1" max="0.5" step="0.05" value="0.2">
+                                        <div class="text-center"><span id="logoSizeValue">20</span>% de la taille du QR code</div>
+                                    </div>
+                                    
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="logoFillColor" class="form-label">Couleur des modules</label>
+                                            <input type="color" class="form-control form-control-color w-100" id="logoFillColor" name="fill_color" value="#000000">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="logoBackColor" class="form-label">Couleur d'arrière-plan</label>
+                                            <input type="color" class="form-control form-control-color w-100" id="logoBackColor" name="back_color" value="#FFFFFF">
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="logoErrorCorrection" class="form-label">Correction d'erreur</label>
+                                            <select class="form-select" id="logoErrorCorrection" name="error_correction">
+                                                <option value="0">Faible (L)</option>
+                                                <option value="1">Moyenne (M)</option>
+                                                <option value="2">Quartile (Q)</option>
+                                                <option value="3" selected>Haute (H)</option>
+                                            </select>
+                                            <div class="form-text">Recommandé: Haute pour les QR codes avec logo</div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="logoBoxSize" class="form-label">Taille des modules</label>
+                                            <input type="range" class="form-range" id="logoBoxSize" name="box_size" min="5" max="20" value="10">
+                                            <div class="text-center"><span id="logoBoxSizeValue">10</span> pixels</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="d-grid">
+                                        <button type="submit" class="btn btn-primary">Générer le QR Code</button>
+                                    </div>
+                                </form>
+                            </div>
+                            
+                            <!-- Onglet QR Code Stylisé -->
+                            <div class="tab-pane fade" id="style" role="tabpanel">
+                                <form id="styleForm" class="qr-form">
+                                    <input type="hidden" name="generation_type" value="predefined">
+                                    
+                                    <div class="mb-3">
+                                        <label for="styleData" class="form-label">Contenu du QR Code</label>
+                                        <textarea class="form-control" id="styleData" name="data" rows="3" placeholder="URL, texte, coordonnées, etc." required></textarea>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label">Style prédéfini</label>
+                                        <div class="row row-cols-2 row-cols-md-3 g-3 mb-3">
+                                            {% for style in predefined_styles %}
+                                            <div class="col">
+                                                <div class="form-check style-option">
+                                                    <input class="form-check-input" type="radio" name="style_name" id="style{{ loop.index }}" value="{{ style.id }}" {% if loop.first %}checked{% endif %}>
+                                                    <label class="form-check-label" for="style{{ loop.index }}">
+                                                        <div class="style-preview" data-style="{{ style.id }}"></div>
+                                                        <div class="style-name">{{ style.name }}</div>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="styleErrorCorrection" class="form-label">Correction d'erreur</label>
+                                            <select class="form-select" id="styleErrorCorrection" name="error_correction">
+                                                <option value="0">Faible (L)</option>
+                                                <option value="1" selected>Moyenne (M)</option>
+                                                <option value="2">Quartile (Q)</option>
+                                                <option value="3">Haute (H)</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="styleBoxSize" class="form-label">Taille des modules</label>
+                                            <input type="range" class="form-range" id="styleBoxSize" name="box_size" min="5" max="20" value="10">
+                                            <div class="text-center"><span id="styleBoxSizeValue">10</span> pixels</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="d-grid">
+                                        <button type="submit" class="btn btn-primary">Générer le QR Code</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-6">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Aperçu du QR Code</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <div id="qrPreview">
+                            <div class="placeholder-container">
+                                <i class="fas fa-qrcode fa-5x text-muted"></i>
+                                <p class="mt-3 text-muted">Remplissez le formulaire et cliquez sur "Générer" pour créer votre QR code</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4" id="exportCard" style="display: none;">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Exporter le QR Code</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="exportForm">
+                            <input type="hidden" id="qrPathInput" name="qr_path" value="">
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Format d'exportation</label>
+                                <div class="btn-group w-100" role="group">
+                                    {% for format in export_formats %}
+                                    <input type="radio" class="btn-check" name="export_format" id="format{{ loop.index }}" value="{{ format.id }}" {% if loop.first %}checked{% endif %}>
+                                    <label class="btn btn-outline-primary" for="format{{ loop.index }}">{{ format.name }}</label>
+                                    {% endfor %}
+                                    <input type="radio" class="btn-check" name="export_format" id="formatAll" value="all">
+                                    <label class="btn btn-outline-primary" for="formatAll">Tous</label>
+                                </div>
+                            </div>
+                            
+                            <div class="format-options" id="pngOptions">
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="pngDpi" class="form-label">Résolution (DPI)</label>
+                                        <select class="form-select" id="pngDpi" name="dpi">
+                                            <option value="72">72 DPI (Web)</option>
+                                            <option value="150">150 DPI</option>
+                                            <option value="300" selected>300 DPI (Impression)</option>
+                                            <option value="600">600 DPI (Haute qualité)</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="pngQuality" class="form-label">Qualité</label>
+                                        <input type="range" class="form-range" id="pngQuality" name="quality" min="70" max="100" value="95">
+                                        <div class="text-center"><span id="pngQualityValue">95</span>%</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="format-options" id="svgOptions" style="display: none;">
+                                <div class="mb-3">
+                                    <label for="svgScale" class="form-label">Échelle</label>
+                                    <input type="range" class="form-range" id="svgScale" name="scale" min="0.5" max="3" step="0.1" value="1">
+                                    <div class="text-center"><span id="svgScaleValue">1.0</span>x</div>
+                                </div>
+                            </div>
+                            
+                            <div class="format-options" id="pdfOptions" style="display: none;">
+                                <div class="mb-3">
+                                    <label for="pdfTitle" class="form-label">Titre du document</label>
+                                    <input type="text" class="form-control" id="pdfTitle" name="title" value="QR Code">
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="pdfWidth" class="form-label">Largeur (mm)</label>
+                                        <input type="number" class="form-control" id="pdfWidth" name="size_width" value="50" min="10" max="200">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="pdfHeight" class="form-label">Hauteur (mm)</label>
+                                        <input type="number" class="form-control" id="pdfHeight" name="size_height" value="50" min="10" max="200">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-download me-2"></i>Exporter
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-light py-4 mt-5">
+        <div class="container text-center">
+            <p>Générateur de QR Codes Personnalisé &copy; {{ now.year }} Anecoop-France</p>
+            <p class="text-muted">Créé par Kevin BIVIA</p>
+        </div>
+    </footer>
+
+    <!-- Modals -->
+    <div class="modal fade" id="errorModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Erreur</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="errorMessage"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

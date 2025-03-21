@@ -1,0 +1,5 @@
+name: qr-code-generator
+type: web
+env: python
+buildCommand: pip install -r requirements.txt
+startCommand: gunicorn src.app:app
