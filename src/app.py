@@ -368,6 +368,43 @@ def page_not_found(e):
 def server_error(e):
     """Gestion des erreurs 500."""
     return render_template('500.html'), 500
+# Ajouter ces routes à la fin du fichier app.py, juste avant le if __name__ == '__main__':
+
+@app.route('/static/<path:path>')
+def serve_static(path):
+    """
+    Route explicite pour servir les fichiers statiques.
+    """
+    return send_from_directory('frontend/static', path)
+
+@app.route('/qrcodes/<path:filename>')
+def serve_qrcode(filename):
+    """
+    Route explicite pour servir les QR codes générés.
+    """
+    return send_from_directory(app.config['GENERATED_FOLDER'], filename)
+
+@app.route('/uploads/<path:filename>')
+def serve_upload(filename):
+    """
+    Route explicite pour servir les fichiers uploadés.
+    """
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+# Pour résoudre les problèmes de permissions sur Render
+# Ajouter juste après BASE_DIR definition:
+
+# Rendre les chemins absolus pour Render
+if os.environ.get('RENDER'):
+    # Sur Render
+    app.config['UPLOAD_FOLDER'] = '/tmp/uploads'
+    app.config['GENERATED_FOLDER'] = '/tmp/generated_qrcodes'
+    app.config['EXPORTED_FOLDER'] = '/tmp/exported_qrcodes'
+else:
+    # Local development
+    app.config['UPLOAD_FOLDER'] = os.path.join(BASE_DIR, 'uploads')
+    app.config['GENERATED_FOLDER'] = os.path.join(BASE_DIR, 'generated_qrcodes')
+    app.config['EXPORTED_FOLDER'] = os.path.join(BASE_DIR, 'exported_qrcodes')
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
