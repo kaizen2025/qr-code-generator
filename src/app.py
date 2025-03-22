@@ -19,14 +19,14 @@ parent_dir = os.path.dirname(current_dir)
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
-# Import des modules backend - with try/except for different environments
+# Import des modules backend avec gestion d'exceptions pour différents environnements
 try:
     # Try direct imports first (when running from src directory)
     from backend.qr_generator.basic_generator import QRCodeGenerator
     from backend.customization.style_customizer import QRCodeCustomizer
     from backend.export.exporter import QRCodeExporter
 except ImportError:
-    # Fall back to fully qualified imports 
+    # Fall back to fully qualified imports
     from src.backend.qr_generator.basic_generator import QRCodeGenerator
     from src.backend.customization.style_customizer import QRCodeCustomizer
     from src.backend.export.exporter import QRCodeExporter
@@ -43,21 +43,29 @@ def inject_now():
 
 # Base directory determination - ensures paths work both locally and on Render
 if os.environ.get('RENDER'):
-    # On Render
+    # Sur Render, utiliser /tmp pour stocker les fichiers temporaires
     BASE_DIR = os.environ.get('RENDER_PROJECT_DIR', os.getcwd())
+    app.config['UPLOAD_FOLDER'] = '/tmp/uploads'
+    app.config['GENERATED_FOLDER'] = '/tmp/generated_qrcodes'
+    app.config['EXPORTED_FOLDER'] = '/tmp/exported_qrcodes'
 else:
-    # Local development
+    # En développement local
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    app.config['UPLOAD_FOLDER'] = os.path.join(BASE_DIR, 'uploads')
+    app.config['GENERATED_FOLDER'] = os.path.join(BASE_DIR, 'generated_qrcodes')
+    app.config['EXPORTED_FOLDER'] = os.path.join(BASE_DIR, 'exported_qrcodes')
 
-# Configuration de l'application with better path handling
-app.config['UPLOAD_FOLDER'] = os.path.join(BASE_DIR, 'uploads')
-app.config['GENERATED_FOLDER'] = os.path.join(BASE_DIR, 'generated_qrcodes')
-app.config['EXPORTED_FOLDER'] = os.path.join(BASE_DIR, 'exported_qrcodes')
+# Taille maximale des uploads
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max upload size
 
-# Création des dossiers nécessaires
+# Création des dossiers nécessaires avec exist_ok=True
 for folder in [app.config['UPLOAD_FOLDER'], app.config['GENERATED_FOLDER'], app.config['EXPORTED_FOLDER']]:
     os.makedirs(folder, exist_ok=True)
+    try:
+        # Assurer que les permissions sont correctes
+        os.chmod(folder, 0o755)
+    except:
+        pass  # Ignore permission errors
 
 # Initialisation des classes backend
 qr_generator = QRCodeGenerator(output_dir=app.config['GENERATED_FOLDER'])
@@ -83,6 +91,55 @@ EXPORT_FORMATS = [
     {'id': 'svg', 'name': 'SVG', 'description': 'Format vectoriel pour impression'},
     {'id': 'pdf', 'name': 'PDF', 'description': 'Document portable'}
 ]
+
+@app.route('/api/status')
+def api_status():
+    """API route pour vérifier l'état du serveur et les chemins de fichiers"""
+    # Vérification de l'existence des dossiers critiques
+    uploads_exists = os.path.exists(app.config['UPLOAD_FOLDER'])
+    generated_exists = os.path.exists(app.config['GENERATED_FOLDER'])
+    exported_exists = os.path.exists(app.config['EXPORTED_FOLDER'])
+    
+    # Vérification des dossiers de styles
+    styles_dir = os.path.join(current_dir, 'frontend/static/img/styles')
+    if os.environ.get('RENDER'):
+        styles_dir = '/tmp/static/img/styles'
+    
+    styles_exists = os.path.exists(styles_dir)
+    
+    # Lister les fichiers dans le dossier des styles
+    style_files = []
+    if styles_exists:
+        try:
+            style_files = os.listdir(styles_dir)
+        except:
+            style_files = ["Permission error"]
+    
+    # Retourner l'état du serveur
+    return jsonify({
+        'status': 'running',
+        'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'environment': 'render' if os.environ.get('RENDER') else 'local',
+        'directories': {
+            'uploads': {
+                'path': app.config['UPLOAD_FOLDER'],
+                'exists': uploads_exists
+            },
+            'generated_qrcodes': {
+                'path': app.config['GENERATED_FOLDER'],
+                'exists': generated_exists
+            },
+            'exported_qrcodes': {
+                'path': app.config['EXPORTED_FOLDER'],
+                'exists': exported_exists
+            },
+            'styles': {
+                'path': styles_dir,
+                'exists': styles_exists,
+                'files': style_files
+            }
+        }
+    })
 
 @app.route('/')
 def index():
@@ -180,10 +237,10 @@ def generate_qrcode():
             return jsonify({'error': 'Type de génération non reconnu'}), 400
         
         if not qr_path or not os.path.exists(qr_path):
-            return jsonify({'error': 'Erreur lors de la génération du QR code'}), 500
+            return jsonify({'error': f'Erreur lors de la génération du QR code: {qr_path}'}), 500
         
         # Chemin relatif pour l'affichage
-        relative_path = os.path.relpath(qr_path, app.config['GENERATED_FOLDER'])
+        relative_path = os.path.basename(qr_path)
         
         return jsonify({
             'success': True,
@@ -193,6 +250,7 @@ def generate_qrcode():
         })
         
     except Exception as e:
+        app.logger.error(f"Erreur lors de la génération du QR code: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/export', methods=['POST'])
@@ -209,7 +267,7 @@ def export_qrcode():
         # Chemin complet du QR code
         full_qr_path = os.path.join(app.config['GENERATED_FOLDER'], qr_path)
         if not os.path.exists(full_qr_path):
-            return jsonify({'error': 'QR code introuvable'}), 404
+            return jsonify({'error': f'QR code introuvable: {full_qr_path}'}), 404
         
         # Format d'exportation
         export_format = request.form.get('export_format', 'png')
@@ -278,7 +336,7 @@ def export_qrcode():
             return jsonify({'error': 'Format d\'exportation non reconnu'}), 400
         
         if not export_path or not os.path.exists(export_path):
-            return jsonify({'error': 'Erreur lors de l\'exportation du QR code'}), 500
+            return jsonify({'error': f'Erreur lors de l\'exportation du QR code: {export_path}'}), 500
         
         return jsonify({
             'success': True,
@@ -287,6 +345,7 @@ def export_qrcode():
         })
         
     except Exception as e:
+        app.logger.error(f"Erreur lors de l'exportation du QR code: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/history')
@@ -297,15 +356,18 @@ def history():
     # Récupération des QR codes générés
     qr_codes = []
     
-    # Parcours du dossier des QR codes générés
     try:
+        # Parcours du dossier des QR codes générés
         for filename in os.listdir(app.config['GENERATED_FOLDER']):
             if filename.endswith('.png') and filename.startswith('qrcode_'):
                 # Chemin complet du fichier
                 file_path = os.path.join(app.config['GENERATED_FOLDER'], filename)
                 
                 # Métadonnées
-                metadata_path = os.path.join(app.config['GENERATED_FOLDER'], 'metadata', f"{os.path.splitext(filename)[0]}.txt")
+                metadata_dir = os.path.join(app.config['GENERATED_FOLDER'], 'metadata')
+                os.makedirs(metadata_dir, exist_ok=True)
+                
+                metadata_path = os.path.join(metadata_dir, f"{os.path.splitext(filename)[0]}.txt")
                 metadata = {}
                 
                 if os.path.exists(metadata_path):
@@ -359,6 +421,14 @@ def uploaded_file(filename):
     """
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
+@app.route('/static/<path:path>')
+def serve_static(path):
+    """
+    Route explicite pour servir les fichiers statiques.
+    Utile pour Render où le serveur peut avoir des problèmes avec les fichiers statiques.
+    """
+    return send_from_directory('frontend/static', path)
+
 @app.errorhandler(404)
 def page_not_found(e):
     """Gestion des erreurs 404."""
@@ -367,44 +437,9 @@ def page_not_found(e):
 @app.errorhandler(500)
 def server_error(e):
     """Gestion des erreurs 500."""
+    app.logger.error(f"Erreur 500: {str(e)}")
     return render_template('500.html'), 500
-# Ajouter ces routes à la fin du fichier app.py, juste avant le if __name__ == '__main__':
-
-@app.route('/static/<path:path>')
-def serve_static(path):
-    """
-    Route explicite pour servir les fichiers statiques.
-    """
-    return send_from_directory('frontend/static', path)
-
-@app.route('/qrcodes/<path:filename>')
-def serve_qrcode(filename):
-    """
-    Route explicite pour servir les QR codes générés.
-    """
-    return send_from_directory(app.config['GENERATED_FOLDER'], filename)
-
-@app.route('/uploads/<path:filename>')
-def serve_upload(filename):
-    """
-    Route explicite pour servir les fichiers uploadés.
-    """
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
-
-# Pour résoudre les problèmes de permissions sur Render
-# Ajouter juste après BASE_DIR definition:
-
-# Rendre les chemins absolus pour Render
-if os.environ.get('RENDER'):
-    # Sur Render
-    app.config['UPLOAD_FOLDER'] = '/tmp/uploads'
-    app.config['GENERATED_FOLDER'] = '/tmp/generated_qrcodes'
-    app.config['EXPORTED_FOLDER'] = '/tmp/exported_qrcodes'
-else:
-    # Local development
-    app.config['UPLOAD_FOLDER'] = os.path.join(BASE_DIR, 'uploads')
-    app.config['GENERATED_FOLDER'] = os.path.join(BASE_DIR, 'generated_qrcodes')
-    app.config['EXPORTED_FOLDER'] = os.path.join(BASE_DIR, 'exported_qrcodes')
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    debug_mode = os.environ.get('FLASK_ENV') == 'development'
+    app.run(debug=debug_mode, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
