@@ -1,642 +1,98 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Générateur de QR Codes Personnalisé</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon">
-    <meta name="description" content="Générateur de QR codes personnalisables avec intégration de logos et d'éléments de réseaux sociaux.">
+    <title>QR Code Generator</title>
+    
+    <meta name="description" content="Generate custom QR codes with advanced styling options, similar to QR Code Monkey">
+    <meta name="keywords" content="QR code, generator, custom, styled, QR Code Monkey">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+    
+    <!-- Fonts -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        
+        /* Custom range slider styling */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 8px;
+            border-radius: 4px;
+            background: #e2e8f0;
+            outline: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+    </style>
 </head>
 <body>
-    <header>
-        <div class="container">
-            <div class="logo">
-                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo">
-                <h1>Générateur de QR Codes Personnalisé</h1>
-            </div>
-            <nav>
-                <ul>
-                    <li><a href="{{ url_for('index') }}" class="active">Générateur</a></li>
-                    <li><a href="{{ url_for('history') }}">Historique</a></li>
-                </ul>
-            </nav>
-        </div>
-    </header>
-
-    <main>
-        <div class="container">
-            <div class="app-container">
-                <!-- Left panel - Customization options -->
-                <div class="options-panel">
-                    <form id="qr-form" method="post">
-                        <!-- Tabs navigation -->
-                        <div class="tabs">
-                            <button type="button" class="tab-button" data-tab="basic">Basique</button>
-                            <button type="button" class="tab-button" data-tab="custom">Personnalisé</button>
-                            <button type="button" class="tab-button" data-tab="logo">Logo</button>
-                            <button type="button" class="tab-button" data-tab="styled">Style</button>
-                            <button type="button" class="tab-button" data-tab="social">Social</button>
-                        </div>
-
-                        <!-- Tab contents -->
-                        <!-- Basic Tab -->
-                        <div id="tab-basic" class="tab-content">
-                            <div class="form-group">
-                                <label for="qr-data">Contenu du QR code</label>
-                                <textarea id="qr-data" name="data" placeholder="URL, texte, coordonnées..." required></textarea>
-                                <p class="hint">Entrez le contenu à encoder dans le QR code (URL, texte, etc.)</p>
-                            </div>
-                            
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="qr-version">Version</label>
-                                    <select id="qr-version" name="version">
-                                        <option value="1">Version 1 (21×21)</option>
-                                        <option value="2">Version 2 (25×25)</option>
-                                        <option value="3">Version 3 (29×29)</option>
-                                        <option value="4">Version 4 (33×33)</option>
-                                        <option value="5">Version 5 (37×37)</option>
-                                        <option value="6">Version 6 (41×41)</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="qr-error-correction">Correction d'erreur</label>
-                                    <select id="qr-error-correction" name="error_correction">
-                                        <option value="0">L - 7%</option>
-                                        <option value="1" selected>M - 15%</option>
-                                        <option value="2">Q - 25%</option>
-                                        <option value="3">H - 30%</option>
-                                    </select>
-                                </div>
-                            </div>
-                            
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="qr-box-size">Taille des modules</label>
-                                    <div class="range-container">
-                                        <input type="range" id="qr-box-size" name="box_size" min="5" max="20" value="10">
-                                        <span id="qr-box-size-value">10</span>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label for="qr-border">Bordure</label>
-                                    <div class="range-container">
-                                        <input type="range" id="qr-border" name="border" min="0" max="10" value="4">
-                                        <span id="qr-border-value">4</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Custom Tab -->
-                        <div id="tab-custom" class="tab-content">
-                            <div class="form-group">
-                                <label for="qr-data-custom">Contenu du QR code</label>
-                                <textarea id="qr-data-custom" name="data_custom" placeholder="URL, texte, coordonnées..." required></textarea>
-                            </div>
-                            
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="fill-color">Couleur des modules</label>
-                                    <input type="color" id="fill-color" name="fill_color" value="#000000">
-                                </div>
-                                <div class="form-group">
-                                    <label for="back-color">Couleur d'arrière-plan</label>
-                                    <input type="color" id="back-color" name="back_color" value="#FFFFFF">
-                                </div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Forme des modules</label>
-                                <div class="shape-selector">
-                                    <div class="shape-option module-shape selected" data-value="square">
-                                        <img src="{{ url_for('static', filename='img/styles/module_shapes/square.png') }}" alt="Carré">
-                                        <span>Carré</span>
-                                    </div>
-                                    <div class="shape-option module-shape" data-value="rounded">
-                                        <img src="{{ url_for('static', filename='img/styles/module_shapes/rounded.png') }}" alt="Arrondi">
-                                        <span>Arrondi</span>
-                                    </div>
-                                    <div class="shape-option module-shape" data-value="circle">
-                                        <img src="{{ url_for('static', filename='img/styles/module_shapes/circle.png') }}" alt="Cercle">
-                                        <span>Cercle</span>
-                                    </div>
-                                    <div class="shape-option module-shape" data-value="dot">
-                                        <img src="{{ url_for('static', filename='img/styles/module_shapes/dot.png') }}" alt="Point">
-                                        <span>Point</span>
-                                    </div>
-                                    <div class="shape-option module-shape" data-value="vertical_bars">
-                                        <img src="{{ url_for('static', filename='img/styles/module_shapes/vertical_bars.png') }}" alt="Barres V.">
-                                        <span>Barres V.</span>
-                                    </div>
-                                    <div class="shape-option module-shape" data-value="horizontal_bars">
-                                        <img src="{{ url_for('static', filename='img/styles/module_shapes/horizontal_bars.png') }}" alt="Barres H.">
-                                        <span>Barres H.</span>
-                                    </div>
-                                    <div class="shape-option module-shape" data-value="gapped_square">
-                                        <img src="{{ url_for('static', filename='img/styles/module_shapes/gapped_square.png') }}" alt="Carré espacé">
-                                        <span>Carré esp.</span>
-                                    </div>
-                                    <div class="shape-option module-shape" data-value="mini_square">
-                                        <img src="{{ url_for('static', filename='img/styles/module_shapes/mini_square.png') }}" alt="Mini carré">
-                                        <span>Mini carré</span>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Forme des yeux</label>
-                                <div class="shape-selector">
-                                    <div class="shape-option eye-shape selected" data-value="square">
-                                        <img src="{{ url_for('static', filename='img/styles/eye_shapes/square.png') }}" alt="Carré">
-                                        <span>Carré</span>
-                                    </div>
-                                    <div class="shape-option eye-shape" data-value="circle">
-                                        <img src="{{ url_for('static', filename='img/styles/eye_shapes/circle.png') }}" alt="Cercle">
-                                        <span>Cercle</span>
-                                    </div>
-                                    <div class="shape-option eye-shape" data-value="rounded">
-                                        <img src="{{ url_for('static', filename='img/styles/eye_shapes/rounded.png') }}" alt="Arrondi">
-                                        <span>Arrondi</span>
-                                    </div>
-                                    <div class="shape-option eye-shape" data-value="cushion">
-                                        <img src="{{ url_for('static', filename='img/styles/eye_shapes/cushion.png') }}" alt="Coussin">
-                                        <span>Coussin</span>
-                                    </div>
-                                    <div class="shape-option eye-shape" data-value="diamond">
-                                        <img src="{{ url_for('static', filename='img/styles/eye_shapes/diamond.png') }}" alt="Losange">
-                                        <span>Losange</span>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Contour des marqueurs</label>
-                                <div class="shape-selector">
-                                    <div class="shape-option frame-shape selected" data-value="square">
-                                        <img src="{{ url_for('static', filename='img/styles/frame_shapes/square.png') }}" alt="Carré">
-                                        <span>Carré</span>
-                                    </div>
-                                    <div class="shape-option frame-shape" data-value="rounded_square">
-                                        <img src="{{ url_for('static', filename='img/styles/frame_shapes/rounded_square.png') }}" alt="Carré arrondi">
-                                        <span>Carré arrondi</span>
-                                    </div>
-                                    <div class="shape-option frame-shape" data-value="circle">
-                                        <img src="{{ url_for('static', filename='img/styles/frame_shapes/circle.png') }}" alt="Cercle">
-                                        <span>Cercle</span>
-                                    </div>
-                                    <div class="shape-option frame-shape" data-value="rounded">
-                                        <img src="{{ url_for('static', filename='img/styles/frame_shapes/rounded.png') }}" alt="Arrondi">
-                                        <span>Arrondi</span>
-                                    </div>
-                                    <div class="shape-option frame-shape" data-value="diamond">
-                                        <img src="{{ url_for('static', filename='img/styles/frame_shapes/diamond.png') }}" alt="Losange">
-                                        <span>Losange</span>
-                                    </div>
-                                    <div class="shape-option frame-shape" data-value="corner_cut">
-                                        <img src="{{ url_for('static', filename='img/styles/frame_shapes/corner_cut.png') }}" alt="Coins coupés">
-                                        <span>Coins coupés</span>
-                                    </div>
-                                    <div class="shape-option frame-shape" data-value="dots">
-                                        <img src="{{ url_for('static', filename='img/styles/frame_shapes/dots.png') }}" alt="Points">
-                                        <span>Points</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Logo Tab -->
-                        <div id="tab-logo" class="tab-content">
-                            <div class="form-group">
-                                <label for="qr-data-logo">Contenu du QR code</label>
-                                <textarea id="qr-data-logo" name="data_logo" placeholder="URL, texte, coordonnées..." required></textarea>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="logo-upload">Importer un logo</label>
-                                <div class="logo-upload-container">
-                                    <div class="logo-preview">
-                                        <img id="logo-preview" src="" alt="Aperçu du logo" style="display: none;">
-                                        <div id="logo-placeholder" class="logo-placeholder">
-                                            <span>Aucun logo sélectionné</span>
-                                        </div>
-                                    </div>
-                                    <div class="logo-buttons">
-                                        <label class="btn" for="logo-upload">Parcourir</label>
-                                        <input type="file" id="logo-upload" name="logo" accept="image/*">
-                                        <button type="button" id="remove-logo" class="btn btn-outline">Supprimer</button>
-                                    </div>
-                                </div>
-                                <p class="hint">Pour un meilleur résultat, utilisez une image avec fond transparent (PNG) et choisissez un niveau de correction d'erreur élevé.</p>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="logo-size">Taille du logo</label>
-                                <div class="range-container">
-                                    <input type="range" id="logo-size" name="logo_size" min="0.05" max="0.35" step="0.01" value="0.2">
-                                    <span id="logo-size-value">20%</span>
-                                </div>
-                            </div>
-                            
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="logo-fill-color">Couleur des modules</label>
-                                    <input type="color" id="logo-fill-color" name="logo_fill_color" value="#000000">
-                                </div>
-                                <div class="form-group">
-                                    <label for="logo-back-color">Couleur d'arrière-plan</label>
-                                    <input type="color" id="logo-back-color" name="logo_back_color" value="#FFFFFF">
-                                </div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="logo-error-correction">Correction d'erreur</label>
-                                <select id="logo-error-correction" name="logo_error_correction">
-                                    <option value="0">L - 7%</option>
-                                    <option value="1">M - 15%</option>
-                                    <option value="2">Q - 25%</option>
-                                    <option value="3" selected>H - 30%</option>
-                                </select>
-                                <p class="hint">Il est recommandé d'utiliser un niveau de correction d'erreur élevé (H) lorsque vous ajoutez un logo.</p>
-                            </div>
-                        </div>
-                        
-                        <!-- Style Tab -->
-                        <div id="tab-styled" class="tab-content">
-                            <div class="form-group">
-                                <label for="qr-data-styled">Contenu du QR code</label>
-                                <textarea id="qr-data-styled" name="data_styled" placeholder="URL, texte, coordonnées..." required></textarea>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Styles prédéfinis</label>
-                                <div class="style-selector">
-                                    {% for style in predefined_styles %}
-                                    <div class="style-option {% if loop.first %}selected{% endif %}" data-value="{{ style.id }}">
-                                        <img src="{{ url_for('static', filename='img/styles/' + style.id + '.png') }}" alt="{{ style.name }}">
-                                        <span>{{ style.name }}</span>
-                                    </div>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="style-error-correction">Correction d'erreur</label>
-                                <select id="style-error-correction" name="style_error_correction">
-                                    <option value="0">L - 7%</option>
-                                    <option value="1" selected>M - 15%</option>
-                                    <option value="2">Q - 25%</option>
-                                    <option value="3">H - 30%</option>
-                                </select>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="module-drawer">Type de module</label>
-                                <select id="module-drawer" name="module_drawer">
-                                    <option value="square">Carré</option>
-                                    <option value="rounded">Arrondi</option>
-                                    <option value="circle">Cercle</option>
-                                    <option value="gapped_square">Carré espacé</option>
-                                    <option value="vertical_bars">Barres verticales</option>
-                                    <option value="horizontal_bars">Barres horizontales</option>
-                                </select>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="color-mask">Type de coloration</label>
-                                <select id="color-mask" name="color_mask">
-                                    <option value="solid">Couleur unie</option>
-                                    <option value="radial_gradient">Dégradé radial</option>
-                                    <option value="horizontal_gradient">Dégradé horizontal</option>
-                                    <option value="vertical_gradient">Dégradé vertical</option>
-                                    <option value="square_gradient">Dégradé carré</option>
-                                </select>
-                            </div>
-                            
-                            <!-- Solid color options -->
-                            <div id="solid-options" class="color-mask-options">
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="front-color">Couleur des modules</label>
-                                        <input type="color" id="front-color" name="front_color" value="#000000">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="back-color">Couleur d'arrière-plan</label>
-                                        <input type="color" id="back-color" name="back_color" value="#FFFFFF">
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Gradient options -->
-                            <div id="radial_gradient-options" class="color-mask-options" style="display: none;">
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="gradient-start-color">Couleur centrale</label>
-                                        <input type="color" id="gradient-start-color" name="gradient_start_color" value="#0066CC">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="gradient-end-color">Couleur extérieure</label>
-                                        <input type="color" id="gradient-end-color" name="gradient_end_color" value="#003366">
-                                    </div>
-                                </div>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="gradient-back-color">Couleur d'arrière-plan</label>
-                                        <input type="color" id="gradient-back-color" name="gradient_back_color" value="#FFFFFF">
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Horizontal gradient options -->
-                            <div id="horizontal_gradient-options" class="color-mask-options" style="display: none;">
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="gradient-start-color">Couleur gauche</label>
-                                        <input type="color" id="gradient-start-color" name="gradient_start_color" value="#FF6600">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="gradient-end-color">Couleur droite</label>
-                                        <input type="color" id="gradient-end-color" name="gradient_end_color" value="#CC0000">
-                                    </div>
-                                </div>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="gradient-back-color">Couleur d'arrière-plan</label>
-                                        <input type="color" id="gradient-back-color" name="gradient_back_color" value="#FFFFFF">
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Vertical gradient options -->
-                            <div id="vertical_gradient-options" class="color-mask-options" style="display: none;">
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="gradient-start-color">Couleur haut</label>
-                                        <input type="color" id="gradient-start-color" name="gradient_start_color" value="#009900">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="gradient-end-color">Couleur bas</label>
-                                        <input type="color" id="gradient-end-color" name="gradient_end_color" value="#003300">
-                                    </div>
-                                </div>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="gradient-back-color">Couleur d'arrière-plan</label>
-                                        <input type="color" id="gradient-back-color" name="gradient_back_color" value="#FFFFFF">
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Square gradient options -->
-                            <div id="square_gradient-options" class="color-mask-options" style="display: none;">
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="gradient-start-color">Couleur centrale</label>
-                                        <input type="color" id="gradient-start-color" name="gradient_start_color" value="#9900CC">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="gradient-end-color">Couleur extérieure</label>
-                                        <input type="color" id="gradient-end-color" name="gradient_end_color" value="#330066">
-                                    </div>
-                                </div>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="gradient-back-color">Couleur d'arrière-plan</label>
-                                        <input type="color" id="gradient-back-color" name="gradient_back_color" value="#FFFFFF">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Social Tab -->
-                        <div id="tab-social" class="tab-content">
-                            <div class="form-group">
-                                <label for="qr-data-social">Contenu du QR code</label>
-                                <textarea id="qr-data-social" name="data_social" placeholder="URL, texte, coordonnées..." required></textarea>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Plateforme</label>
-                                <div class="social-selector">
-                                    {% for platform in social_platforms %}
-                                    <div class="social-platform {% if loop.first %}selected{% endif %}" data-value="{{ platform.id }}" style="--platform-color: {{ platform.color }}">
-                                        <img src="{{ platform.icon_url }}" alt="{{ platform.name }}">
-                                        <span>{{ platform.name }}</span>
-                                    </div>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                            
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="social-fill-color">Couleur des modules</label>
-                                    <input type="color" id="social-fill-color" name="social_fill_color" value="#000000">
-                                </div>
-                                <div class="form-group">
-                                    <label for="social-back-color">Couleur d'arrière-plan</label>
-                                    <input type="color" id="social-back-color" name="social_back_color" value="#FFFFFF">
-                                </div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <div class="checkbox-group">
-                                    <input type="checkbox" id="use-platform-color" name="use_platform_color" checked>
-                                    <label for="use-platform-color">Utiliser la couleur de la plateforme</label>
-                                </div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Disposition des icônes</label>
-                                <div class="layout-selector">
-                                    <div class="layout-option layout-circle selected">
-                                        <img src="{{ url_for('static', filename='img/layouts/circle.png') }}" alt="Cercle">
-                                        <span>Cercle</span>
-                                    </div>
-                                    <div class="layout-option layout-line">
-                                        <img src="{{ url_for('static', filename='img/layouts/line.png') }}" alt="Ligne">
-                                        <span>Ligne</span>
-                                    </div>
-                                    <div class="layout-option layout-grid">
-                                        <img src="{{ url_for('static', filename='img/layouts/grid.png') }}" alt="Grille">
-                                        <span>Grille</span>
-                                    </div>
-                                </div>
-                                <input type="hidden" id="layout-type" name="layout" value="circle">
-                            </div>
-                        </div>
-                        
-                        <div class="form-actions">
-                            <button type="submit" id="generate-btn" class="btn btn-primary">Générer le QR Code</button>
-                        </div>
-                    </form>
-                </div>
-
-                <!-- Right panel - Preview and export -->
-                <div class="preview-panel">
-                    <div class="preview-container">
-                        <h2>Aperçu</h2>
-                        <div id="preview-wrapper">
-                            <img id="qr-preview" src="{{ url_for('static', filename='img/qr-placeholder.png') }}" alt="Aperçu du QR code">
-                        </div>
-                        <div class="quality-slider">
-                            <span>Faible qualité</span>
-                            <input type="range" id="quality-slider" min="1" max="3" value="2">
-                            <span>Haute qualité</span>
-                        </div>
-                    </div>
-
-                    <div class="export-container">
-                        <h2>Exportation</h2>
-                        <div class="export-options">
-                            <button type="button" class="export-button btn" data-format="png">PNG</button>
-                            <button type="button" class="export-button btn" data-format="svg">SVG</button>
-                            <button type="button" class="export-button btn" data-format="pdf">PDF</button>
-                            <button type="button" class="export-button btn" data-format="eps">EPS</button>
-                            <button type="button" class="export-button btn btn-primary" data-format="all">Tous les formats</button>
-                        </div>
-                        
-                        <div class="export-format-buttons">
-                            <button type="button" class="export-format-button active" data-format="png">PNG</button>
-                            <button type="button" class="export-format-button" data-format="svg">SVG</button>
-                            <button type="button" class="export-format-button" data-format="pdf">PDF</button>
-                            <button type="button" class="export-format-button" data-format="eps">EPS</button>
-                        </div>
-                        
-                        <div class="export-details">
-                            <div id="png-options" class="export-format-options">
-                                <h3>Options PNG</h3>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="png-dpi">Résolution (DPI)</label>
-                                        <select id="png-dpi" name="png_dpi">
-                                            <option value="72">72 DPI (Web)</option>
-                                            <option value="150">150 DPI</option>
-                                            <option value="300" selected>300 DPI (Impression)</option>
-                                            <option value="600">600 DPI (Haute qualité)</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="png-quality">Qualité</label>
-                                        <select id="png-quality" name="png_quality">
-                                            <option value="70">70%</option>
-                                            <option value="80">80%</option>
-                                            <option value="90">90%</option>
-                                            <option value="95" selected>95%</option>
-                                            <option value="100">100%</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="png-size">Dimensions (px)</label>
-                                        <div class="dimension-inputs">
-                                            <input type="number" id="png-width" name="png_width" value="300" min="50" max="2000">
-                                            <span>×</span>
-                                            <input type="number" id="png-height" name="png_height" value="300" min="50" max="2000">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div id="svg-options" class="export-format-options" style="display: none;">
-                                <h3>Options SVG</h3>
-                                <div class="form-group">
-                                    <label for="svg-scale">Échelle</label>
-                                    <select id="svg-scale" name="svg_scale">
-                                        <option value="0.5">0.5x</option>
-                                        <option value="1" selected>1x</option>
-                                        <option value="1.5">1.5x</option>
-                                        <option value="2">2x</option>
-                                        <option value="3">3x</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="svg-size">Dimensions (px)</label>
-                                    <div class="dimension-inputs">
-                                        <input type="number" id="svg-width" name="svg_width" value="300" min="50" max="2000">
-                                        <span>×</span>
-                                        <input type="number" id="svg-height" name="svg_height" value="300" min="50" max="2000">
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div id="pdf-options" class="export-format-options" style="display: none;">
-                                <h3>Options PDF</h3>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="pdf-title">Titre</label>
-                                        <input type="text" id="pdf-title" name="pdf_title" value="QR Code">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="pdf-author">Auteur</label>
-                                        <input type="text" id="pdf-author" name="pdf_author" value="QR Code Generator">
-                                    </div>
-                                </div>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="pdf-size">Dimensions (mm)</label>
-                                        <div class="dimension-inputs">
-                                            <input type="number" id="pdf-width" name="pdf_width" value="50" min="10" max="500">
-                                            <span>×</span>
-                                            <input type="number" id="pdf-height" name="pdf_height" value="50" min="10" max="500">
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="pdf-position">Position (mm depuis le coin inf. gauche)</label>
-                                        <div class="dimension-inputs">
-                                            <input type="number" id="pdf-x" name="pdf_x" value="80" min="0" max="500">
-                                            <span>×</span>
-                                            <input type="number" id="pdf-y" name="pdf_y" value="150" min="0" max="500">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div id="eps-options" class="export-format-options" style="display: none;">
-                                <h3>Options EPS</h3>
-                                <div class="form-group">
-                                    <label for="eps-dpi">Résolution (DPI)</label>
-                                    <select id="eps-dpi" name="eps_dpi">
-                                        <option value="72">72 DPI</option>
-                                        <option value="150">150 DPI</option>
-                                        <option value="300" selected>300 DPI</option>
-                                        <option value="600">600 DPI</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="download-container">
-                            <a id="download-link" href="#" class="btn btn-primary" style="display: none;">Télécharger</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <footer>
-        <div class="container">
-            <p>&copy; {{ now.year }} Tous droits réservés</p>
-        </div>
-    </footer>
-
-    <!-- Notifications -->
-    <div id="notification-container">
-        <div id="error-container" class="notification error" style="display: none;"></div>
-        <div id="success-container" class="notification success" style="display: none;"></div>
-    </div>
-
-    <!-- Loading indicator -->
-    <div id="loading-indicator" style="display: none;">
-        <div class="spinner"></div>
-        <span>Traitement en cours...</span>
-    </div>
-
-    <!-- Scripts -->
-    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <div id="root"></div>
+    
+    <!-- React and ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- App JS -->
+    <script src="src/frontend/static/js/app.js"></script>
+    
+    <script>
+        // Initialize the React application
+        document.addEventListener('DOMContentLoaded', function() {
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(React.createElement(QRCodeGenerator));
+        });
+    </script>
 </body>
 </html>
