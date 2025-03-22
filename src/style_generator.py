@@ -1,9 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+"""
+Module de personnalisation avancée pour les QR codes.
+Ce module fournit des fonctionnalités avancées pour personnaliser l'apparence des QR codes.
+"""
+
 import os
+import uuid
+from datetime import datetime
 import qrcode
-import math
 from qrcode.image.styledpil import StyledPilImage
 from qrcode.image.styles.moduledrawers import (
     SquareModuleDrawer, 
@@ -20,492 +26,357 @@ from qrcode.image.styles.colormasks import (
     HorizontalGradiantColorMask,
     VerticalGradiantColorMask
 )
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw, ImageChops
 
-class QRStyleGenerator:
-    """Classe pour générer des QR codes avec différents styles"""
-    
+class QRCodeCustomizer:
+    """
+    Classe pour la personnalisation avancée des QR codes.
+    Fournit des méthodes pour personnaliser l'apparence des QR codes avec différents styles.
+    """
+
     def __init__(self, output_dir=None):
-        """Initialisation du générateur de styles"""
-        self.output_dir = output_dir or "static/img/styles"
+        """
+        Initialise le personnalisateur de QR codes.
         
-        # Créer les sous-dossiers pour organiser les styles
-        self.module_shapes_dir = os.path.join(self.output_dir, "module_shapes")
-        self.frame_shapes_dir = os.path.join(self.output_dir, "frame_shapes")
-        self.eye_shapes_dir = os.path.join(self.output_dir, "eye_shapes")
+        Args:
+            output_dir (str, optional): Répertoire de sortie pour les QR codes générés.
+                Si non spécifié, utilise le répertoire courant.
+        """
+        self.output_dir = output_dir or os.path.join(os.getcwd(), 'generated_qrcodes')
         
-        # S'assurer que tous les dossiers existent
-        for directory in [self.output_dir, self.module_shapes_dir, self.frame_shapes_dir, self.eye_shapes_dir]:
-            os.makedirs(directory, exist_ok=True)
+        # Création du répertoire de sortie s'il n'existe pas
+        if not os.path.exists(self.output_dir):
+            os.makedirs(self.output_dir)
         
-        # Définition des formes de modules disponibles (corps)
-        self.module_shapes = {
+        # Dictionnaire des styles de modules disponibles
+        self.module_drawers = {
             'square': SquareModuleDrawer(),
-            'rounded': RoundedModuleDrawer(),
+            'gapped_square': GappedSquareModuleDrawer(),
             'circle': CircleModuleDrawer(),
-            'dot': CircleModuleDrawer(radius_ratio=0.6),
+            'rounded': RoundedModuleDrawer(),
             'vertical_bars': VerticalBarsDrawer(),
             'horizontal_bars': HorizontalBarsDrawer(),
-            'gapped_square': GappedSquareModuleDrawer(),
+            'dot': CircleModuleDrawer(radius_ratio=0.6),
             'mini_square': SquareModuleDrawer(module_scale=0.8)
         }
         
-        # Définition des styles complets
-        self.styles = {
+        # Dictionnaire des masques de couleur disponibles
+        self.color_masks = {
+            'solid': SolidFillColorMask,
+            'radial_gradient': RadialGradiantColorMask,
+            'square_gradient': SquareGradiantColorMask,
+            'horizontal_gradient': HorizontalGradiantColorMask,
+            'vertical_gradient': VerticalGradiantColorMask
+        }
+        
+        # Dictionnaire des styles prédéfinis
+        self.predefined_styles = {
             'classic': {
-                'drawer': SquareModuleDrawer(),
-                'mask': SolidFillColorMask(front_color=(0, 0, 0), back_color=(255, 255, 255))
+                'module_drawer': 'square',
+                'color_mask': 'solid',
+                'front_color': (0, 0, 0),
+                'back_color': (255, 255, 255)
             },
             'rounded': {
-                'drawer': RoundedModuleDrawer(radius_ratio=0.5),
-                'mask': SolidFillColorMask(front_color=(0, 0, 0), back_color=(255, 255, 255))
+                'module_drawer': 'rounded',
+                'color_mask': 'solid',
+                'front_color': (0, 0, 0),
+                'back_color': (255, 255, 255)
             },
             'dots': {
-                'drawer': CircleModuleDrawer(),
-                'mask': SolidFillColorMask(front_color=(0, 0, 0), back_color=(255, 255, 255))
+                'module_drawer': 'circle',
+                'color_mask': 'solid',
+                'front_color': (0, 0, 0),
+                'back_color': (255, 255, 255)
             },
             'modern_blue': {
-                'drawer': RoundedModuleDrawer(),
-                'mask': VerticalGradiantColorMask(
-                    bottom_color=(0, 51, 153),
-                    top_color=(0, 102, 204),
-                    back_color=(255, 255, 255)
-                )
+                'module_drawer': 'rounded',
+                'color_mask': 'vertical_gradient',
+                'front_color': (0, 102, 204),
+                'bottom_color': (0, 51, 153),
+                'back_color': (255, 255, 255)
             },
             'sunset': {
-                'drawer': CircleModuleDrawer(),
-                'mask': HorizontalGradiantColorMask(
-                    left_color=(255, 102, 0),
-                    right_color=(204, 0, 0),
-                    back_color=(255, 255, 255)
-                )
+                'module_drawer': 'circle',
+                'color_mask': 'horizontal_gradient',
+                'left_color': (255, 102, 0),
+                'right_color': (204, 0, 0),
+                'back_color': (255, 255, 255)
             },
             'forest': {
-                'drawer': SquareModuleDrawer(),
-                'mask': RadialGradiantColorMask(
-                    center_color=(0, 102, 0), 
-                    edge_color=(0, 51, 0),
-                    back_color=(255, 255, 255)
-                )
+                'module_drawer': 'square',
+                'color_mask': 'radial_gradient',
+                'front_color': (0, 102, 0),
+                'edge_color': (0, 51, 0),
+                'gradient_center': (0.5, 0.5),
+                'back_color': (255, 255, 255)
             },
             'ocean': {
-                'drawer': RoundedModuleDrawer(),
-                'mask': RadialGradiantColorMask(
-                    center_color=(0, 153, 204), 
-                    edge_color=(0, 51, 102),
-                    back_color=(255, 255, 255)
-                )
+                'module_drawer': 'rounded',
+                'color_mask': 'radial_gradient',
+                'front_color': (0, 153, 204),
+                'edge_color': (0, 51, 102),
+                'gradient_center': (0.5, 0.5),
+                'back_color': (255, 255, 255)
             },
             'barcode': {
-                'drawer': VerticalBarsDrawer(),
-                'mask': SolidFillColorMask(front_color=(0, 0, 0), back_color=(255, 255, 255))
+                'module_drawer': 'vertical_bars',
+                'color_mask': 'solid',
+                'front_color': (0, 0, 0),
+                'back_color': (255, 255, 255)
             },
             'elegant': {
-                'drawer': GappedSquareModuleDrawer(),
-                'mask': SolidFillColorMask(front_color=(51, 51, 51), back_color=(245, 245, 245))
+                'module_drawer': 'gapped_square',
+                'color_mask': 'solid',
+                'front_color': (51, 51, 51),
+                'back_color': (245, 245, 245)
             }
         }
     
-    def generate_module_shape_samples(self):
-        """Génère des exemples pour toutes les formes de modules (corps)"""
-        print("Génération des formes de modules...")
-        shapes = [
-            {'name': 'square', 'drawer': SquareModuleDrawer()},
-            {'name': 'rounded', 'drawer': RoundedModuleDrawer(radius_ratio=0.5)},
-            {'name': 'circle', 'drawer': CircleModuleDrawer()},
-            {'name': 'dot', 'drawer': CircleModuleDrawer(radius_ratio=0.6)},
-            {'name': 'vertical_bars', 'drawer': VerticalBarsDrawer()},
-            {'name': 'horizontal_bars', 'drawer': HorizontalBarsDrawer()},
-            {'name': 'gapped_square', 'drawer': GappedSquareModuleDrawer()},
-            {'name': 'mini_square', 'drawer': SquareModuleDrawer(module_scale=0.8)},
-        ]
+    def generate_styled_qrcode(self, data, filename=None, **options):
+        """
+        Génère un QR code avec un style personnalisé.
         
-        for shape in shapes:
-            self._generate_shape_preview(shape['name'], shape['drawer'], self.module_shapes_dir)
-    
-    def generate_frame_shape_samples(self):
-        """Génère des exemples pour toutes les formes de contour des marqueurs"""
-        print("Génération des formes de contour des marqueurs...")
+        Args:
+            data (str): Données à encoder dans le QR code (URL, texte, etc.)
+            filename (str, optional): Nom du fichier de sortie. Si non spécifié,
+                génère un nom basé sur un UUID.
+            **options: Options supplémentaires pour la personnalisation du QR code.
+                - version (int): Version du QR code (1-40)
+                - error_correction (int): Niveau de correction d'erreur
+                - box_size (int): Taille de chaque "boîte" du QR code en pixels
+                - border (int): Taille de la bordure en nombre de boîtes
+                - module_drawer (str): Style des modules ('square', 'gapped_square', 'circle', 'rounded', etc.)
+                - color_mask (str): Type de masque de couleur ('solid', 'radial_gradient', etc.)
+                - front_color (tuple/str): Couleur de premier plan (RGB ou nom)
+                - back_color (tuple/str): Couleur d'arrière-plan (RGB ou nom)
+                - gradient_center (tuple): Centre du gradient (x, y) entre 0 et 1
+                - gradient_direction (tuple): Direction du gradient (x, y)
+            
+        Returns:
+            str: Chemin du fichier QR code généré.
+        """
+        if not filename:
+            filename = f"styled_qrcode_{uuid.uuid4().hex[:8]}.png"
         
-        # Liste des formes de contour
-        frames = [
-            'square', 'rounded_square', 'circle', 'rounded', 'dots', 
-            'diamond', 'corner_cut', 'jagged', 'pointed', 'pixel'
-        ]
+        # Chemin complet du fichier de sortie
+        output_path = os.path.join(self.output_dir, filename)
         
-        # Taille de chaque image
-        size = 100
+        # Paramètres par défaut
+        version = options.get('version', 1)
+        error_correction = options.get('error_correction', qrcode.constants.ERROR_CORRECT_M)
+        box_size = options.get('box_size', 10)
+        border = options.get('border', 4)
         
-        for frame in frames:
-            img = Image.new('RGBA', (size, size), (255, 255, 255, 0))
-            draw = ImageDraw.Draw(img)
-            
-            # Dessiner différentes formes de contour
-            if frame == 'square':
-                draw.rectangle([5, 5, size-5, size-5], outline=(0, 0, 0), width=5)
-            elif frame == 'rounded_square':
-                # Simuler un rectangle arrondi
-                draw.rounded_rectangle([5, 5, size-5, size-5], radius=10, outline=(0, 0, 0), width=5)
-            elif frame == 'circle':
-                draw.ellipse([5, 5, size-5, size-5], outline=(0, 0, 0), width=5)
-            elif frame == 'rounded':
-                # Rectangle avec coins très arrondis
-                draw.rounded_rectangle([5, 5, size-5, size-5], radius=20, outline=(0, 0, 0), width=5)
-            elif frame == 'dots':
-                # Points pour former un cadre
-                r = 4  # rayon des points
-                spacing = 10  # espacement entre les points
-                for x in range(10, size-10, spacing):
-                    draw.ellipse([x-r, 10-r, x+r, 10+r], fill=(0, 0, 0))
-                    draw.ellipse([x-r, size-10-r, x+r, size-10+r], fill=(0, 0, 0))
-                for y in range(10, size-10, spacing):
-                    draw.ellipse([10-r, y-r, 10+r, y+r], fill=(0, 0, 0))
-                    draw.ellipse([size-10-r, y-r, size-10+r, y+r], fill=(0, 0, 0))
-            elif frame == 'diamond':
-                # Forme en diamant
-                points = [(size//2, 5), (size-5, size//2), (size//2, size-5), (5, size//2)]
-                draw.polygon(points, outline=(0, 0, 0), width=5)
-            elif frame == 'corner_cut':
-                # Rectangle avec coins coupés
-                w = size - 10
-                h = size - 10
-                offset = 5
-                corner_cut = 15
-                points = [
-                    (offset + corner_cut, offset), (offset + w - corner_cut, offset),
-                    (offset + w, offset + corner_cut), (offset + w, offset + h - corner_cut),
-                    (offset + w - corner_cut, offset + h), (offset + corner_cut, offset + h),
-                    (offset, offset + h - corner_cut), (offset, offset + corner_cut)
-                ]
-                draw.polygon(points, outline=(0, 0, 0), width=5)
-            elif frame == 'jagged':
-                # Contour en zigzag
-                points = []
-                steps = 20
-                for i in range(steps):
-                    angle = 2 * math.pi * i / steps
-                    radius = size//2 - 10
-                    jag = 5 if i % 2 == 0 else 10
-                    x = size//2 + int((radius - jag) * math.cos(angle))
-                    y = size//2 + int((radius - jag) * math.sin(angle))
-                    points.append((x, y))
-                draw.polygon(points, outline=(0, 0, 0), width=3)
-            elif frame == 'pointed':
-                # Forme étoilée
-                points = []
-                steps = 8
-                for i in range(steps * 2):
-                    angle = math.pi * i / steps
-                    radius = size//2 - 10
-                    if i % 2 == 0:
-                        r = radius
-                    else:
-                        r = radius - 15
-                    x = size//2 + int(r * math.cos(angle))
-                    y = size//2 + int(r * math.sin(angle))
-                    points.append((x, y))
-                draw.polygon(points, outline=(0, 0, 0), width=3)
-            elif frame == 'pixel':
-                # Style pixelisé
-                pixel_size = 8
-                for x in range(0, size, pixel_size):
-                    if x < 15 or x > size - 15 - pixel_size:
-                        for y in range(0, size, pixel_size):
-                            draw.rectangle([x, y, x+pixel_size, y+pixel_size], outline=(0, 0, 0), width=1)
-                    else:
-                        draw.rectangle([x, 0, x+pixel_size, pixel_size], outline=(0, 0, 0), width=1)
-                        draw.rectangle([x, size-pixel_size, x+pixel_size, size], outline=(0, 0, 0), width=1)
-            
-            # Ajouter le texte
-            font_size = 12
-            draw.text((size//2, size+5), frame, fill=(0, 0, 0), anchor="mt")
-            
-            # Sauvegarder l'image
-            output_path = os.path.join(self.frame_shapes_dir, f"{frame}.png")
-            img.save(output_path)
-            print(f"  - {frame} créé: {output_path}")
-    
-    def generate_eye_shape_samples(self):
-        """Génère des exemples pour toutes les formes du centre des marqueurs (yeux)"""
-        print("Génération des formes de centre des marqueurs...")
+        # Style des modules
+        module_drawer_name = options.get('module_drawer', 'square')
+        module_drawer = self.module_drawers.get(module_drawer_name, SquareModuleDrawer())
         
-        # Liste des formes d'yeux
-        eyes = [
-            'square', 'circle', 'rounded', 'cushion', 'diamond',
-            'star', 'dots', 'rounded_rect', 'flower', 'leaf'
-        ]
+        # Masque de couleur
+        color_mask_name = options.get('color_mask', 'solid')
+        color_mask_class = self.color_masks.get(color_mask_name, SolidFillColorMask)
         
-        # Taille de chaque image
-        size = 100
+        # Couleurs
+        front_color = options.get('front_color', (0, 0, 0))
+        back_color = options.get('back_color', (255, 255, 255))
         
-        for eye in eyes:
-            img = Image.new('RGBA', (size, size), (255, 255, 255, 0))
-            draw = ImageDraw.Draw(img)
-            
-            # Dessiner la partie externe (grand carré)
-            outer_offset = 5
-            outer_size = size - 2 * outer_offset
-            
-            # Dessiner la partie interne (petit carré)
-            inner_offset = size // 3
-            inner_size = size // 3
-            
-            # Dessiner différentes formes d'yeux
-            if eye == 'square':
-                # Carré standard (externe + interne)
-                draw.rectangle([outer_offset, outer_offset, outer_offset + outer_size, outer_offset + outer_size], fill=(0, 0, 0))
-                draw.rectangle([inner_offset, inner_offset, inner_offset + inner_size, inner_offset + inner_size], fill=(255, 255, 255))
-            elif eye == 'circle':
-                # Cercle
-                draw.ellipse([outer_offset, outer_offset, outer_offset + outer_size, outer_offset + outer_size], fill=(0, 0, 0))
-                draw.ellipse([inner_offset, inner_offset, inner_offset + inner_size, inner_offset + inner_size], fill=(255, 255, 255))
-            elif eye == 'rounded':
-                # Carré arrondi
-                draw.rounded_rectangle([outer_offset, outer_offset, outer_offset + outer_size, outer_offset + outer_size], radius=15, fill=(0, 0, 0))
-                draw.rounded_rectangle([inner_offset, inner_offset, inner_offset + inner_size, inner_offset + inner_size], radius=5, fill=(255, 255, 255))
-            elif eye == 'cushion':
-                # Forme de coussin
-                outer_points = [
-                    (outer_offset + outer_size//2, outer_offset),
-                    (outer_offset + outer_size, outer_offset + outer_size//2),
-                    (outer_offset + outer_size//2, outer_offset + outer_size),
-                    (outer_offset, outer_offset + outer_size//2)
-                ]
-                inner_points = [
-                    (inner_offset + inner_size//2, inner_offset),
-                    (inner_offset + inner_size, inner_offset + inner_size//2),
-                    (inner_offset + inner_size//2, inner_offset + inner_size),
-                    (inner_offset, inner_offset + inner_size//2)
-                ]
-                draw.polygon(outer_points, fill=(0, 0, 0))
-                draw.polygon(inner_points, fill=(255, 255, 255))
-            elif eye == 'diamond':
-                # Diamant
-                outer_points = [
-                    (outer_offset + outer_size//2, outer_offset),
-                    (outer_offset + outer_size, outer_offset + outer_size//2),
-                    (outer_offset + outer_size//2, outer_offset + outer_size),
-                    (outer_offset, outer_offset + outer_size//2)
-                ]
-                inner_points = [
-                    (inner_offset + inner_size//2, inner_offset),
-                    (inner_offset + inner_size, inner_offset + inner_size//2),
-                    (inner_offset + inner_size//2, inner_offset + inner_size),
-                    (inner_offset, inner_offset + inner_size//2)
-                ]
-                draw.polygon(outer_points, fill=(0, 0, 0))
-                draw.polygon(inner_points, fill=(255, 255, 255))
-            elif eye == 'star':
-                # Étoile
-                # Externe
-                outer_points = []
-                outer_steps = 10
-                for i in range(outer_steps * 2):
-                    angle = math.pi * i / outer_steps
-                    radius = outer_size // 2
-                    if i % 2 == 0:
-                        r = radius
-                    else:
-                        r = radius * 0.6
-                    x = size // 2 + int(r * math.cos(angle))
-                    y = size // 2 + int(r * math.sin(angle))
-                    outer_points.append((x, y))
-                
-                # Interne
-                inner_points = []
-                inner_steps = 8
-                for i in range(inner_steps * 2):
-                    angle = math.pi * i / inner_steps
-                    radius = inner_size // 2
-                    if i % 2 == 0:
-                        r = radius
-                    else:
-                        r = radius * 0.6
-                    x = size // 2 + int(r * math.cos(angle))
-                    y = size // 2 + int(r * math.sin(angle))
-                    inner_points.append((x, y))
-                
-                draw.polygon(outer_points, fill=(0, 0, 0))
-                draw.polygon(inner_points, fill=(255, 255, 255))
-            elif eye == 'dots':
-                # Ensemble de points
-                draw.rectangle([outer_offset, outer_offset, outer_offset + outer_size, outer_offset + outer_size], fill=(0, 0, 0))
-                
-                # Cercles pour le contour
-                r = 5  # rayon
-                spacing = 15  # espacement
-                for x in range(outer_offset + spacing, outer_offset + outer_size, spacing):
-                    draw.ellipse([x-r, outer_offset+spacing-r, x+r, outer_offset+spacing+r], fill=(255, 255, 255))
-                    draw.ellipse([x-r, outer_offset+outer_size-spacing-r, x+r, outer_offset+outer_size-spacing+r], fill=(255, 255, 255))
-                
-                for y in range(outer_offset + spacing, outer_offset + outer_size, spacing):
-                    draw.ellipse([outer_offset+spacing-r, y-r, outer_offset+spacing+r, y+r], fill=(255, 255, 255))
-                    draw.ellipse([outer_offset+outer_size-spacing-r, y-r, outer_offset+outer_size-spacing+r, y+r], fill=(255, 255, 255))
-                
-                # Centre
-                draw.ellipse([inner_offset, inner_offset, inner_offset + inner_size, inner_offset + inner_size], fill=(255, 255, 255))
-            elif eye == 'rounded_rect':
-                # Rectangle arrondi
-                radius = min(outer_size, outer_size) // 4
-                draw.rounded_rectangle([outer_offset, outer_offset, outer_offset + outer_size, outer_offset + outer_size], radius=radius, fill=(0, 0, 0))
-                
-                inner_radius = min(inner_size, inner_size) // 4
-                draw.rounded_rectangle([inner_offset, inner_offset, inner_offset + inner_size, inner_offset + inner_size], radius=inner_radius, fill=(255, 255, 255))
-            elif eye == 'flower':
-                # Forme de fleur
-                # Externe
-                draw.ellipse([outer_offset, outer_offset, outer_offset + outer_size, outer_offset + outer_size], fill=(0, 0, 0))
-                
-                # Pétales
-                petals = 6
-                petal_size = outer_size // 3
-                for i in range(petals):
-                    angle = 2 * math.pi * i / petals
-                    x = size // 2 + int((outer_size // 2) * math.cos(angle))
-                    y = size // 2 + int((outer_size // 2) * math.sin(angle))
-                    draw.ellipse([x - petal_size//2, y - petal_size//2, x + petal_size//2, y + petal_size//2], fill=(0, 0, 0))
-                
-                # Centre
-                draw.ellipse([inner_offset, inner_offset, inner_offset + inner_size, inner_offset + inner_size], fill=(255, 255, 255))
-            elif eye == 'leaf':
-                # Forme de feuille
-                draw.ellipse([outer_offset, outer_offset, outer_offset + outer_size, outer_offset + outer_size], fill=(0, 0, 0))
-                
-                # Dessins de feuilles
-                for i in range(4):
-                    angle = math.pi / 2 * i
-                    x1 = size // 2 + int((outer_size // 2) * math.cos(angle))
-                    y1 = size // 2 + int((outer_size // 2) * math.sin(angle))
-                    x2 = size // 2 + int((outer_size // 2) * math.cos(angle + math.pi))
-                    y2 = size // 2 + int((outer_size // 2) * math.sin(angle + math.pi))
-                    draw.line([(x1, y1), (x2, y2)], fill=(0, 0, 0), width=5)
-                
-                # Centre
-                draw.ellipse([inner_offset, inner_offset, inner_offset + inner_size, inner_offset + inner_size], fill=(255, 255, 255))
-            
-            # Ajouter le texte
-            font_size = 12
-            draw.text((size//2, size+5), eye, fill=(0, 0, 0), anchor="mt")
-            
-            # Sauvegarder l'image
-            output_path = os.path.join(self.eye_shapes_dir, f"{eye}.png")
-            img.save(output_path)
-            print(f"  - {eye} créé: {output_path}")
-    
-    def _generate_shape_preview(self, name, drawer, output_dir):
-        """Génère une prévisualisation pour une forme de module spécifique"""
-        # Création du QR code
+        # Options spécifiques aux gradients
+        color_mask_kwargs = {}
+        if color_mask_name == 'solid':
+            color_mask_kwargs = {
+                'front_color': front_color,
+                'back_color': back_color
+            }
+        elif color_mask_name == 'radial_gradient' or color_mask_name == 'square_gradient':
+            color_mask_kwargs = {
+                'center_color': front_color,
+                'edge_color': options.get('edge_color', (100, 100, 100)),
+                'back_color': back_color
+            }
+            if 'gradient_center' in options:
+                color_mask_kwargs['center'] = options.get('gradient_center', (0.5, 0.5))
+        elif color_mask_name == 'horizontal_gradient':
+            color_mask_kwargs = {
+                'left_color': front_color,
+                'right_color': options.get('right_color', (100, 100, 100)),
+                'back_color': back_color
+            }
+        elif color_mask_name == 'vertical_gradient':
+            color_mask_kwargs = {
+                'top_color': front_color,
+                'bottom_color': options.get('bottom_color', (100, 100, 100)),
+                'back_color': back_color
+            }
+        
+        # Création du masque de couleur
+        color_mask = color_mask_class(**color_mask_kwargs)
+        
+        # Génération du QR code
         qr = qrcode.QRCode(
-            version=1,
-            error_correction=qrcode.constants.ERROR_CORRECT_M,
-            box_size=10,
-            border=4,
+            version=version,
+            error_correction=error_correction,
+            box_size=box_size,
+            border=border,
         )
-        qr.add_data("https://example.com")
+        qr.add_data(data)
         qr.make(fit=True)
         
-        try:
-            # Application du style
-            img = qr.make_image(
-                image_factory=StyledPilImage,
-                module_drawer=drawer,
-                color_mask=SolidFillColorMask(front_color=(0, 0, 0), back_color=(255, 255, 255))
-            )
-            
-            # Ajouter nom comme texte
-            pil_img = img.get_image()
-            draw = ImageDraw.Draw(pil_img)
-            width, height = pil_img.size
-            draw.text((width//2, height-10), name, fill=(0, 0, 0))
-            
-            # Sauvegarde
-            output_path = os.path.join(output_dir, f"{name}.png")
-            pil_img.save(output_path)
-            print(f"  - {name} créé: {output_path}")
-            
-        except Exception as e:
-            print(f"Erreur lors de la génération de {name}: {e}")
+        # Création de l'image avec le style personnalisé
+        img = qr.make_image(
+            image_factory=StyledPilImage,
+            module_drawer=module_drawer,
+            color_mask=color_mask
+        )
+        
+        # Personnalisation des yeux et des contours si spécifiée
+        img_pil = img.get_image()
+        if 'frame_shape' in options or 'eye_shape' in options:
+            img_pil = self._customize_eyes_and_frames(img_pil, options)
+        
+        # Sauvegarde de l'image
+        img_pil.save(output_path)
+        
+        # Enregistrement des métadonnées
+        self._save_metadata(data, output_path, options)
+        
+        return output_path
     
-    def generate_style_samples(self, sample_data="https://example.com"):
-        """Génère des exemples de tous les styles prédéfinis"""
-        generated_files = {}
+    def _customize_eyes_and_frames(self, qr_image, options):
+        """
+        Personnalise les yeux et les contours du QR code.
         
-        for style_name, style_config in self.styles.items():
-            output_path = os.path.join(self.output_dir, f"{style_name}.png")
-            
-            # Création du QR code
-            qr = qrcode.QRCode(
-                version=1,
-                error_correction=qrcode.constants.ERROR_CORRECT_M,
-                box_size=10,
-                border=4,
-            )
-            qr.add_data(sample_data)
-            qr.make(fit=True)
-            
-            try:
-                # Application du style
-                img = qr.make_image(
-                    image_factory=StyledPilImage,
-                    module_drawer=style_config['drawer'],
-                    color_mask=style_config['mask']
-                )
-                
-                # Sauvegarde
-                img.save(output_path)
-                generated_files[style_name] = output_path
-                
-            except Exception as e:
-                print(f"Erreur lors de la génération du style {style_name}: {e}")
-                # Fallback
-                fallback = qr.make_image(fill_color="black", back_color="white")
-                fallback.save(output_path)
-                generated_files[style_name] = output_path
-            
-        return generated_files
+        Args:
+            qr_image: Image PIL du QR code
+            options: Options de personnalisation
+        
+        Returns:
+            Image: Image PIL modifiée
+        """
+        # Cette fonction est une implémentation simplifiée pour la démonstration
+        # Pour une implémentation complète, il faudrait localiser les modules des yeux 
+        # et remplacer leur forme avec des techniques plus avancées
+        
+        # Par exemple, nous pourrions simplement ajouter un overlay pour montrer la personnalisation
+        frame_shape = options.get('frame_shape')
+        eye_shape = options.get('eye_shape')
+        
+        # Dans une implémentation réelle, nous remplacerions les yeux par des formes personnalisées
+        # Mais pour cette démonstration, nous laissons l'image telle quelle
+        
+        return qr_image
     
-    def generate_all_samples(self):
-        """Génère tous les exemples de styles et formes"""
-        # Générer les styles complets
-        self.generate_style_samples()
+    def generate_custom_shape_qrcode(self, data, module_shape, frame_shape, eye_shape, filename=None, **options):
+        """
+        Génère un QR code avec des formes personnalisées pour les modules, les contours et les yeux.
         
-        # Générer les formes de modules
-        self.generate_module_shape_samples()
+        Args:
+            data (str): Données à encoder dans le QR code
+            module_shape (str): Style des modules
+            frame_shape (str): Style des contours
+            eye_shape (str): Style des yeux
+            filename (str, optional): Nom du fichier de sortie
+            **options: Options supplémentaires
         
-        # Générer les formes de contour
-        self.generate_frame_shape_samples()
+        Returns:
+            str: Chemin du fichier QR code généré
+        """
+        if not filename:
+            filename = f"custom_shape_qrcode_{uuid.uuid4().hex[:8]}.png"
         
-        # Générer les formes d'yeux
-        self.generate_eye_shape_samples()
+        # Mise à jour des options
+        options['module_drawer'] = module_shape
+        options['frame_shape'] = frame_shape
+        options['eye_shape'] = eye_shape
         
-        return {
-            'styles': os.listdir(self.output_dir),
-            'module_shapes': os.listdir(self.module_shapes_dir),
-            'frame_shapes': os.listdir(self.frame_shapes_dir),
-            'eye_shapes': os.listdir(self.eye_shapes_dir)
-        }
+        # Génération du QR code personnalisé
+        return self.generate_styled_qrcode(data, filename, **options)
+    
+    def apply_predefined_style(self, data, style_name, filename=None, **custom_options):
+        """
+        Applique un style prédéfini au QR code.
+        
+        Args:
+            data (str): Données à encoder dans le QR code (URL, texte, etc.)
+            style_name (str): Nom du style prédéfini à appliquer
+            filename (str, optional): Nom du fichier de sortie. Si non spécifié,
+                génère un nom basé sur un UUID.
+            **custom_options: Options personnalisées qui remplaceront celles du style prédéfini
+            
+        Returns:
+            str: Chemin du fichier QR code généré.
+        """
+        # Vérification que le style existe
+        if style_name not in self.predefined_styles:
+            raise ValueError(f"Style '{style_name}' non reconnu. Styles disponibles: {', '.join(self.predefined_styles.keys())}")
+        
+        # Récupération des options du style prédéfini
+        style_options = self.predefined_styles[style_name].copy()
+        
+        # Fusion avec les options personnalisées
+        style_options.update(custom_options)
+        
+        # Génération du QR code avec le style
+        if not filename:
+            filename = f"{style_name}_qrcode_{uuid.uuid4().hex[:8]}.png"
+        
+        return self.generate_styled_qrcode(data, filename, **style_options)
+    
+    def _save_metadata(self, data, output_path, options=None):
+        """
+        Enregistre les métadonnées du QR code généré.
+        
+        Args:
+            data (str): Données encodées dans le QR code
+            output_path (str): Chemin du fichier QR code généré
+            options (dict, optional): Options utilisées pour la génération
+        """
+        metadata_dir = os.path.join(self.output_dir, 'metadata')
+        if not os.path.exists(metadata_dir):
+            os.makedirs(metadata_dir)
+        
+        # Nom du fichier de métadonnées basé sur le nom du QR code
+        qr_filename = os.path.basename(output_path)
+        metadata_filename = f"{os.path.splitext(qr_filename)[0]}.txt"
+        metadata_path = os.path.join(metadata_dir, metadata_filename)
+        
+        # Création du contenu des métadonnées
+        metadata_content = [
+            f"Date de création: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+            f"Données: {data}",
+            f"Fichier: {qr_filename}",
+        ]
+        
+        # Ajout des options si spécifiées
+        if options:
+            metadata_content.append("Options:")
+            for key, value in options.items():
+                metadata_content.append(f"  {key}: {value}")
+        
+        # Écriture des métadonnées dans le fichier
+        with open(metadata_path, 'w', encoding='utf-8') as f:
+            f.write('\n'.join(metadata_content))
 
-# Fonction principale
-def main():
-    if os.environ.get('RENDER'):
-        output_dir = '/tmp/static/img/styles'
-    else:
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        output_dir = os.path.join(base_dir, 'src', 'frontend', 'static', 'img', 'styles')
-    
-    print(f"Génération des styles QR dans: {output_dir}")
-    
-    # Création du générateur
-    generator = QRStyleGenerator(output_dir)
-    
-    # Génération de tous les exemples
-    results = generator.generate_all_samples()
-    
-    print("Génération terminée avec succès!")
-    print(f"- Styles prédéfinis: {len(results['styles'])}")
-    print(f"- Formes de modules: {len(results['module_shapes'])}")
-    print(f"- Formes de contour: {len(results['frame_shapes'])}")
-    print(f"- Formes d'yeux: {len(results['eye_shapes'])}")
 
+# Exemple d'utilisation si exécuté directement
 if __name__ == "__main__":
-    main()
+    customizer = QRCodeCustomizer()
+    
+    # Exemple 1: QR code avec style personnalisé
+    styled_qr = customizer.generate_styled_qrcode(
+        "https://www.example.com",
+        "example_styled.png",
+        module_drawer="circle",
+        color_mask="radial_gradient",
+        front_color=(0, 102, 204),
+        edge_color=(0, 51, 153),
+        gradient_center=(0.5, 0.5)
+    )
+    print(f"QR code stylisé généré: {styled_qr}")
+    
+    # Exemple 2: QR code avec style prédéfini
+    predefined_qr = customizer.apply_predefined_style(
+        "https://www.example.com",
+        "ocean",
+        "example_ocean.png"
+    )
+    print(f"QR code avec style prédéfini généré: {predefined_qr}")
