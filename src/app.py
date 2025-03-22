@@ -185,6 +185,27 @@ def generate_qrcode():
             options['back_color'] = request.form.get('back_color', '#FFFFFF')
             
             qr_path = qr_generator.generate_qrcode_with_options(data, filename, **options)
+            # Ajouter ce bloc dans la route /generate pour gérer les formes personnalisées:
+
+elif generation_type == 'custom_shape':
+    # Personnalisation avancée avec des formes spécifiques
+    module_shape = request.form.get('module_shape', 'square')
+    frame_shape = request.form.get('frame_shape', 'square')
+    eye_shape = request.form.get('eye_shape', 'square')
+    
+    # Options de couleur
+    options['fill_color'] = request.form.get('fill_color', '#000000')
+    options['back_color'] = request.form.get('back_color', '#FFFFFF')
+    
+    # Génération du QR code avec les formes personnalisées
+    qr_path = qr_customizer.generate_custom_shape_qrcode(
+        data, 
+        module_shape, 
+        frame_shape, 
+        eye_shape, 
+        filename,
+        **options
+    )
             
         elif generation_type == 'logo':
             # Ajout d'un logo
