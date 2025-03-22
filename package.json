@@ -1,0 +1,11 @@
+{
+  "name": "qr-code-generator",
+  "version": "1.0.0",
+  "description": "Générateur de QR codes personnalisé",
+  "scripts": {
+    "start": "python src/render_init.py && gunicorn src.app:app"
+  },
+  "engines": {
+    "node": "16.x"
+  }
+}
