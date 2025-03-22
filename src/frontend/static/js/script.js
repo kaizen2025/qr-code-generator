@@ -14,6 +14,102 @@ $(document).ready(function() {
     setupTabsAndExportOptions();
 });
 
+// JavaScript à ajouter au fichier script.js pour gérer les sélections de forme
+
+// Configuration pour la personnalisation avancée des QR codes
+$(document).ready(function() {
+    // Gestion des sélections de forme des modules
+    $('input[name="module_shape"]').on('change', function() {
+        const selectedShape = $(this).val();
+        console.log('Forme de module sélectionnée:', selectedShape);
+        
+        // Mettre à jour l'aperçu si possible
+        updateQRPreview();
+    });
+    
+    // Gestion des sélections de forme de contour des marqueurs
+    $('input[name="frame_shape"]').on('change', function() {
+        const selectedShape = $(this).val();
+        console.log('Forme de contour sélectionnée:', selectedShape);
+        
+        // Mettre à jour l'aperçu si possible
+        updateQRPreview();
+    });
+    
+    // Gestion des sélections de forme du centre des marqueurs
+    $('input[name="eye_shape"]').on('change', function() {
+        const selectedShape = $(this).val();
+        console.log('Forme d\'œil sélectionnée:', selectedShape);
+        
+        // Mettre à jour l'aperçu si possible
+        updateQRPreview();
+    });
+    
+    // Fonction pour mettre à jour l'aperçu du QR code
+    function updateQRPreview() {
+        const data = $('#styleData').val();
+        if (!data) return; // Ne pas générer si aucune donnée
+        
+        const moduleShape = $('input[name="module_shape"]:checked').val();
+        const frameShape = $('input[name="frame_shape"]:checked').val();
+        const eyeShape = $('input[name="eye_shape"]:checked').val();
+        
+        // Afficher un indicateur de chargement
+        $('#qrPreview').html(`
+            <div class="loading-container">
+                <div class="loading-spinner"></div>
+                <p class="loading-text">Génération du QR code en cours...</p>
+            </div>
+        `);
+        
+        // Préparation des données pour l'envoi
+        const formData = new FormData();
+        formData.append('data', data);
+        formData.append('generation_type', 'custom_shape');
+        formData.append('module_shape', moduleShape);
+        formData.append('frame_shape', frameShape);
+        formData.append('eye_shape', eyeShape);
+        formData.append('error_correction', $('#styleErrorCorrection').val());
+        formData.append('box_size', $('#styleBoxSize').val());
+        
+        // Envoi de la requête AJAX
+        $.ajax({
+            url: '/generate',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    // Affichage du QR code généré
+                    $('#qrPreview').html(`
+                        <img src="${response.download_url}" class="qr-preview-image fade-in" alt="QR Code">
+                    `);
+                    
+                    // Affichage des options d'exportation
+                    $('#exportCard').show();
+                    $('#qrPathInput').val(response.qr_path);
+                } else {
+                    showError(response.error || 'Une erreur est survenue lors de la génération du QR code.');
+                }
+            },
+            error: function(xhr) {
+                let errorMessage = 'Une erreur est survenue lors de la génération du QR code.';
+                if (xhr.responseJSON && xhr.responseJSON.error) {
+                    errorMessage = xhr.responseJSON.error;
+                }
+                showError(errorMessage);
+            }
+        });
+    }
+    
+    // Génération automatique lorsque le contenu change
+    $('#styleData').on('input', _.debounce(function() {
+        if ($(this).val().trim().length > 0) {
+            updateQRPreview();
+        }
+    }, 500));
+});
 // Mise à jour des valeurs affichées pour les sliders
 function updateSliderValues() {
     // Taille des modules
