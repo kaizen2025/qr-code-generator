@@ -1,18 +1,19 @@
 /**
- * Script principal pour le générateur de QR codes personnalisé
- * Gère les interactions utilisateur, les requêtes AJAX et les mises à jour de l'interface
+ * Advanced QR Code Generator Script
+ * Enhanced version with better user interaction and previews
  */
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Éléments DOM principaux
+    // ===== DOM Elements =====
     const qrForm = document.getElementById('qr-form');
-    const qrDataInput = document.getElementById('qr-data');
+    const qrDataInputs = document.querySelectorAll('[id^="qr-data"]');
     const qrPreview = document.getElementById('qr-preview');
+    const qrPreviewContainer = document.getElementById('preview-wrapper');
     const generateBtn = document.getElementById('generate-btn');
     const tabButtons = document.querySelectorAll('.tab-button');
     const tabContents = document.querySelectorAll('.tab-content');
     const exportButtons = document.querySelectorAll('.export-button');
-    const colorPickers = document.querySelectorAll('.color-picker');
+    const colorPickers = document.querySelectorAll('input[type="color"]');
     const rangeInputs = document.querySelectorAll('input[type="range"]');
     const logoUpload = document.getElementById('logo-upload');
     const styleOptions = document.querySelectorAll('.style-option');
@@ -20,58 +21,59 @@ document.addEventListener('DOMContentLoaded', function() {
     const moduleShapes = document.querySelectorAll('.module-shape');
     const frameShapes = document.querySelectorAll('.frame-shape');
     const eyeShapes = document.querySelectorAll('.eye-shape');
-    
-    // Variables globales
+    const downloadLink = document.getElementById('download-link');
+    const exportFormatButtons = document.querySelectorAll('.export-format-button');
+
+    // ===== State Variables =====
     let currentQRPath = null;
-    let currentTab = 'basic'; // Tab par défaut
+    let currentTab = 'basic'; // Default tab
     let debounceTimer;
-    const DEBOUNCE_DELAY = 300; // Délai pour éviter trop de requêtes lors des changements rapides
+    const DEBOUNCE_DELAY = 300; // Delay to avoid too many requests during rapid changes
+    let previewInProgress = false;
+    let lastQRData = '';
+    let lastOptions = {};
 
-    // ------- Initialisation -------
-
-    /**
-     * Initialise les événements et l'état initial de l'application
-     */
+    // ===== Initialization =====
     function init() {
-        // Initialiser les onglets
+        // Initialize tabs
         initTabs();
         
-        // Initialiser les sélecteurs de couleur
+        // Initialize color pickers
         initColorPickers();
         
-        // Initialiser les sliders
+        // Initialize range sliders
         initRangeInputs();
 
-        // Événement de soumission du formulaire
+        // Form submission event
         if (qrForm) {
             qrForm.addEventListener('submit', handleFormSubmit);
         }
 
-        // Événements pour les modifications d'input (prévisualisation en temps réel)
-        if (qrDataInput) {
-            qrDataInput.addEventListener('input', debouncePreview);
-        }
+        // Data input events (real-time preview)
+        initDataInputs();
 
-        // Initialiser tous les sélecteurs d'options
+        // Initialize all option selectors
         initOptionSelectors();
         
-        // Initialiser l'upload de logo
+        // Initialize logo upload
         initLogoUpload();
         
-        // Initialiser les boutons d'exportation
+        // Initialize export buttons
         initExportButtons();
         
-        // Afficher la prévisualisation initiale si des données sont présentes
-        if (qrDataInput && qrDataInput.value) {
+        // Synchronize data inputs across tabs
+        syncDataInputs();
+        
+        // Show initial preview if data is present
+        if (qrDataInputs[0] && qrDataInputs[0].value) {
             generatePreview();
         }
+        
+        // Initialize format selection for export
+        initExportFormatSelection();
     }
 
-    // ------- Gestion des onglets -------
-
-    /**
-     * Initialise les onglets et leurs événements
-     */
+    // ===== Tab Management =====
     function initTabs() {
         tabButtons.forEach(button => {
             button.addEventListener('click', () => {
@@ -80,19 +82,15 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        // Activer l'onglet par défaut
+        // Activate default tab
         if (tabButtons.length > 0) {
             const defaultTab = tabButtons[0].getAttribute('data-tab');
             switchTab(defaultTab);
         }
     }
 
-    /**
-     * Change l'onglet actif
-     * @param {string} tabId - ID de l'onglet à activer
-     */
     function switchTab(tabId) {
-        // Mettre à jour l'onglet actif
+        // Update active tab
         tabButtons.forEach(button => {
             if (button.getAttribute('data-tab') === tabId) {
                 button.classList.add('active');
@@ -101,47 +99,80 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // Afficher le contenu de l'onglet actif
+        // Show active tab content
         tabContents.forEach(content => {
             if (content.getAttribute('id') === `tab-${tabId}`) {
                 content.classList.add('active');
+                content.style.display = 'block';
             } else {
                 content.classList.remove('active');
+                content.style.display = 'none';
             }
         });
 
-        // Mettre à jour l'onglet courant
+        // Update current tab
         currentTab = tabId;
         
-        // Générer une prévisualisation avec les options de l'onglet actif
+        // Generate preview with active tab options
         generatePreview();
     }
 
-    // ------- Gestion des couleurs -------
-
-    /**
-     * Initialise les sélecteurs de couleur
-     */
-    function initColorPickers() {
-        colorPickers.forEach(picker => {
-            picker.addEventListener('input', debouncePreview);
+    // ===== Data Input Management =====
+    function initDataInputs() {
+        qrDataInputs.forEach(input => {
+            input.addEventListener('input', (e) => {
+                // Sync the value to all data inputs
+                const newValue = e.target.value;
+                syncDataValue(newValue);
+                debouncePreview();
+            });
         });
     }
 
-    // ------- Gestion des sliders -------
+    function syncDataInputs() {
+        // Initial sync to make sure all have the same value
+        if (qrDataInputs.length > 0) {
+            const masterValue = qrDataInputs[0].value;
+            syncDataValue(masterValue);
+        }
+    }
 
-    /**
-     * Initialise les inputs de type range
-     */
+    function syncDataValue(value) {
+        qrDataInputs.forEach(input => {
+            input.value = value;
+        });
+    }
+
+    // ===== Color Pickers =====
+    function initColorPickers() {
+        colorPickers.forEach(picker => {
+            picker.addEventListener('input', debouncePreview);
+            
+            // Add color preview box next to the picker
+            const colorPreview = document.createElement('div');
+            colorPreview.className = 'color-preview';
+            colorPreview.style.backgroundColor = picker.value;
+            
+            // Insert the preview after the picker
+            picker.parentNode.insertBefore(colorPreview, picker.nextSibling);
+            
+            // Update preview on change
+            picker.addEventListener('input', () => {
+                colorPreview.style.backgroundColor = picker.value;
+            });
+        });
+    }
+
+    // ===== Range Inputs =====
     function initRangeInputs() {
         rangeInputs.forEach(input => {
-            // Mise à jour de la valeur affichée
+            // Update the displayed value
             const valueDisplay = document.getElementById(`${input.id}-value`);
             if (valueDisplay) {
-                valueDisplay.textContent = input.value;
+                valueDisplay.textContent = formatRangeValue(input);
                 
                 input.addEventListener('input', () => {
-                    valueDisplay.textContent = input.value;
+                    valueDisplay.textContent = formatRangeValue(input);
                     debouncePreview();
                 });
             } else {
@@ -149,191 +180,289 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    
+    function formatRangeValue(rangeInput) {
+        // Format the value according to input type
+        const value = rangeInput.value;
+        
+        // Add percentage sign to certain inputs
+        if (rangeInput.id === 'logo-size') {
+            return Math.round(value * 100) + '%';
+        }
+        
+        // Return raw value for other inputs
+        return value;
+    }
 
-    // ------- Gestion des sélecteurs d'options -------
-
-    /**
-     * Initialise tous les sélecteurs d'options (styles, formes, etc.)
-     */
+    // ===== Option Selectors =====
     function initOptionSelectors() {
-        // Options de style
+        // Style options
         styleOptions.forEach(option => {
             option.addEventListener('click', () => {
-                // Désélectionner toutes les options
+                // Deselect all options
                 styleOptions.forEach(opt => opt.classList.remove('selected'));
                 
-                // Sélectionner l'option cliquée
+                // Select the clicked option
                 option.classList.add('selected');
                 
-                // Générer la prévisualisation
+                // Generate preview
                 debouncePreview();
             });
         });
 
-        // Plateformes sociales
+        // Social platforms
         socialPlatforms.forEach(platform => {
             platform.addEventListener('click', () => {
-                // Toggle de la sélection (pour permettre la sélection multiple)
-                platform.classList.toggle('selected');
+                if (currentTab === 'social') {
+                    // Single selection for social tab
+                    socialPlatforms.forEach(p => p.classList.remove('selected'));
+                    platform.classList.add('selected');
+                } else {
+                    // Toggle selection for multi_social tab
+                    platform.classList.toggle('selected');
+                }
                 
-                // Générer la prévisualisation
+                // Generate preview
                 debouncePreview();
             });
         });
 
-        // Formes de modules
+        // Module shapes
         moduleShapes.forEach(shape => {
             shape.addEventListener('click', () => {
-                // Désélectionner toutes les formes
+                // Deselect all shapes
                 moduleShapes.forEach(s => s.classList.remove('selected'));
                 
-                // Sélectionner la forme cliquée
+                // Select the clicked shape
                 shape.classList.add('selected');
                 
-                // Générer la prévisualisation
+                // Generate preview
                 debouncePreview();
             });
         });
 
-        // Formes de contour
+        // Frame shapes
         frameShapes.forEach(shape => {
             shape.addEventListener('click', () => {
-                // Désélectionner toutes les formes
+                // Deselect all shapes
                 frameShapes.forEach(s => s.classList.remove('selected'));
                 
-                // Sélectionner la forme cliquée
+                // Select the clicked shape
                 shape.classList.add('selected');
                 
-                // Générer la prévisualisation
+                // Generate preview
                 debouncePreview();
             });
         });
 
-        // Formes des yeux
+        // Eye shapes
         eyeShapes.forEach(shape => {
             shape.addEventListener('click', () => {
-                // Désélectionner toutes les formes
+                // Deselect all shapes
                 eyeShapes.forEach(s => s.classList.remove('selected'));
                 
-                // Sélectionner la forme cliquée
+                // Select the clicked shape
                 shape.classList.add('selected');
                 
-                // Générer la prévisualisation
+                // Generate preview
+                debouncePreview();
+            });
+        });
+        
+        // Color mask selector
+        const colorMaskSelect = document.getElementById('color-mask');
+        if (colorMaskSelect) {
+            colorMaskSelect.addEventListener('change', updateColorMaskOptions);
+        }
+        
+        // Use platform color checkbox
+        const usePlatformColorCheckbox = document.getElementById('use-platform-color');
+        if (usePlatformColorCheckbox) {
+            usePlatformColorCheckbox.addEventListener('change', () => {
+                const socialFillColor = document.getElementById('social-fill-color');
+                if (socialFillColor) {
+                    if (usePlatformColorCheckbox.checked) {
+                        // Get selected platform's color
+                        const selectedPlatform = document.querySelector('.social-platform.selected');
+                        if (selectedPlatform) {
+                            const platformColor = selectedPlatform.style.getPropertyValue('--platform-color') || '#000000';
+                            socialFillColor.value = platformColor;
+                            const colorPreview = socialFillColor.nextElementSibling;
+                            if (colorPreview && colorPreview.classList.contains('color-preview')) {
+                                colorPreview.style.backgroundColor = platformColor;
+                            }
+                        }
+                    }
+                    debouncePreview();
+                }
+            });
+        }
+        
+        // Layout options
+        const layoutOptions = document.querySelectorAll('.layout-option');
+        layoutOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                // Deselect all options
+                layoutOptions.forEach(opt => opt.classList.remove('selected'));
+                
+                // Select the clicked option
+                option.classList.add('selected');
+                
+                // Update hidden input
+                const layoutType = document.getElementById('layout-type');
+                if (layoutType) {
+                    layoutType.value = option.classList[1].replace('layout-', '');
+                }
+                
+                // Generate preview
                 debouncePreview();
             });
         });
     }
+    
+    function updateColorMaskOptions() {
+        const colorMask = document.getElementById('color-mask').value;
+        
+        // Hide all color mask option containers
+        document.querySelectorAll('.color-mask-options').forEach(container => {
+            container.style.display = 'none';
+        });
+        
+        // Show the appropriate container
+        const selectedContainer = document.getElementById(`${colorMask}-options`);
+        if (selectedContainer) {
+            selectedContainer.style.display = 'block';
+        }
+        
+        // Generate a preview with the new mask
+        debouncePreview();
+    }
 
-    // ------- Gestion de l'upload de logo -------
-
-    /**
-     * Initialise l'upload de logo
-     */
+    // ===== Logo Upload =====
     function initLogoUpload() {
         if (logoUpload) {
             logoUpload.addEventListener('change', handleLogoUpload);
             
-            // Bouton de suppression du logo
+            // Logo removal button
             const removeLogoBtn = document.getElementById('remove-logo');
             if (removeLogoBtn) {
                 removeLogoBtn.addEventListener('click', () => {
-                    // Réinitialiser l'input file
+                    // Reset file input
                     logoUpload.value = '';
                     
-                    // Masquer l'aperçu du logo
+                    // Hide logo preview
                     const logoPreview = document.getElementById('logo-preview');
+                    const logoPlaceholder = document.getElementById('logo-placeholder');
                     if (logoPreview) {
                         logoPreview.style.display = 'none';
                         logoPreview.src = '';
                     }
+                    if (logoPlaceholder) {
+                        logoPlaceholder.style.display = 'block';
+                    }
                     
-                    // Générer la prévisualisation sans logo
+                    // Generate preview without logo
                     debouncePreview();
                 });
             }
         }
     }
 
-    /**
-     * Gère l'upload d'un logo
-     * @param {Event} event - Événement de changement de l'input file
-     */
     function handleLogoUpload(event) {
         const file = event.target.files[0];
         if (file) {
-            // Vérifier le type de fichier
+            // Check file type
             if (!file.type.match('image.*')) {
-                showError('Le fichier sélectionné n\'est pas une image');
+                showError('The selected file is not an image');
                 return;
             }
             
-            // Vérifier la taille du fichier (max 2 Mo)
+            // Check file size (max 2 MB)
             if (file.size > 2 * 1024 * 1024) {
-                showError('L\'image est trop volumineuse (max 2 Mo)');
+                showError('The image is too large (max 2 MB)');
                 return;
             }
             
-            // Afficher l'aperçu du logo
+            // Show logo preview
             const reader = new FileReader();
             reader.onload = function(e) {
                 const logoPreview = document.getElementById('logo-preview');
+                const logoPlaceholder = document.getElementById('logo-placeholder');
                 if (logoPreview) {
                     logoPreview.style.display = 'block';
                     logoPreview.src = e.target.result;
                 }
+                if (logoPlaceholder) {
+                    logoPlaceholder.style.display = 'none';
+                }
                 
-                // Générer la prévisualisation avec le logo
+                // Generate preview with logo
                 debouncePreview();
             };
             reader.readAsDataURL(file);
         }
     }
 
-    // ------- Gestion des boutons d'exportation -------
-
-    /**
-     * Initialise les boutons d'exportation
-     */
+    // ===== Export Buttons =====
     function initExportButtons() {
         exportButtons.forEach(button => {
+            button.disabled = true;
+            button.classList.add('disabled');
+            
             button.addEventListener('click', () => {
                 const format = button.getAttribute('data-format');
                 exportQRCode(format);
             });
         });
     }
+    
+    function initExportFormatSelection() {
+        exportFormatButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const format = button.getAttribute('data-format');
+                
+                // Update active button
+                exportFormatButtons.forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                button.classList.add('active');
+                
+                // Show corresponding options
+                document.querySelectorAll('.export-format-options').forEach(container => {
+                    container.style.display = 'none';
+                });
+                
+                const optionsContainer = document.getElementById(`${format}-options`);
+                if (optionsContainer) {
+                    optionsContainer.style.display = 'block';
+                }
+            });
+        });
+    }
 
-    // ------- Gestion des formulaires -------
-
-    /**
-     * Gère la soumission du formulaire (génération du QR code)
-     * @param {Event} event - Événement de soumission du formulaire
-     */
+    // ===== Form Submission =====
     function handleFormSubmit(event) {
         event.preventDefault();
         generateQRCode();
     }
 
-    // ------- Génération de QR code -------
-
-    /**
-     * Génère un QR code avec les options sélectionnées
-     */
+    // ===== QR Code Generation =====
     function generateQRCode() {
-        // Vérifier que des données sont présentes
-        if (!qrDataInput || !qrDataInput.value.trim()) {
-            showError('Veuillez saisir du contenu pour le QR code');
+        // Verify data is present
+        const activeDataInput = document.querySelector(`#tab-${currentTab} [id^="qr-data"]`);
+        if (!activeDataInput || !activeDataInput.value.trim()) {
+            showError('Please enter content for the QR code');
             return;
         }
         
-        // Afficher un indicateur de chargement
+        // Show loading indicator
         showLoading(true);
         
-        // Récupérer les options en fonction de l'onglet actif
+        // Get options based on active tab
         const formData = new FormData();
-        formData.append('data', qrDataInput.value.trim());
+        formData.append('data', activeDataInput.value.trim());
         
-        // Options communes
+        // Common options
         const version = document.getElementById('qr-version')?.value || 1;
         const errorCorrection = document.getElementById('qr-error-correction')?.value || 1;
         const boxSize = document.getElementById('qr-box-size')?.value || 10;
@@ -344,19 +473,27 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('box_size', boxSize);
         formData.append('border', border);
         
-        // Type de génération en fonction de l'onglet actif
+        // Generation type based on active tab
         formData.append('generation_type', currentTab);
         
-        // Options spécifiques à l'onglet "custom"
+        // Tab-specific options
         if (currentTab === 'custom') {
             const fillColor = document.getElementById('fill-color')?.value || '#000000';
             const backColor = document.getElementById('back-color')?.value || '#FFFFFF';
             
             formData.append('fill_color', fillColor);
             formData.append('back_color', backColor);
+            
+            // Custom shapes
+            const moduleShape = document.querySelector('.module-shape.selected')?.getAttribute('data-value') || 'square';
+            const frameShape = document.querySelector('.frame-shape.selected')?.getAttribute('data-value') || 'square';
+            const eyeShape = document.querySelector('.eye-shape.selected')?.getAttribute('data-value') || 'square';
+            
+            formData.append('module_shape', moduleShape);
+            formData.append('frame_shape', frameShape);
+            formData.append('eye_shape', eyeShape);
         }
         
-        // Options spécifiques à l'onglet "logo"
         else if (currentTab === 'logo') {
             // Logo
             const logoFile = logoUpload?.files[0];
@@ -364,27 +501,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 formData.append('logo', logoFile);
             }
             
-            // Taille du logo
+            // Logo size
             const logoSize = document.getElementById('logo-size')?.value || 0.2;
             formData.append('logo_size', logoSize);
             
-            // Couleurs
+            // Colors
             const fillColor = document.getElementById('logo-fill-color')?.value || '#000000';
             const backColor = document.getElementById('logo-back-color')?.value || '#FFFFFF';
             
             formData.append('fill_color', fillColor);
             formData.append('back_color', backColor);
+            
+            // Error correction for logo should be higher
+            const logoErrorCorrection = document.getElementById('logo-error-correction')?.value || 3;
+            formData.append('error_correction', logoErrorCorrection);
         }
         
-        // Options spécifiques à l'onglet "styled"
         else if (currentTab === 'styled') {
-            const moduleDrawer = document.querySelector('.module-shape.selected')?.getAttribute('data-value') || 'square';
+            const moduleDrawer = document.getElementById('module-drawer')?.value || 'square';
             const colorMask = document.getElementById('color-mask')?.value || 'solid';
             
             formData.append('module_drawer', moduleDrawer);
             formData.append('color_mask', colorMask);
             
-            // Couleurs pour le masque
+            // Colors for the mask
             if (colorMask === 'solid') {
                 const frontColor = document.getElementById('front-color')?.value || '#000000';
                 const backColor = document.getElementById('back-color')?.value || '#FFFFFF';
@@ -392,7 +532,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 formData.append('front_color', frontColor);
                 formData.append('back_color', backColor);
             } else {
-                // Options pour les gradients
+                // Gradient options
                 const frontColor = document.getElementById('gradient-start-color')?.value || '#000000';
                 const edgeColor = document.getElementById('gradient-end-color')?.value || '#666666';
                 const backColor = document.getElementById('gradient-back-color')?.value || '#FFFFFF';
@@ -401,142 +541,122 @@ document.addEventListener('DOMContentLoaded', function() {
                 formData.append('edge_color', edgeColor);
                 formData.append('back_color', backColor);
                 
-                // Centre du gradient
+                // Gradient center
                 if (document.getElementById('gradient-center-x') && document.getElementById('gradient-center-y')) {
-                    const gradientCenterX = document.getElementById('gradient-center-x').value;
-                    const gradientCenterY = document.getElementById('gradient-center-y').value;
-                    
-                    formData.append('gradient_center_x', gradientCenterX);
-                    formData.append('gradient_center_y', gradientCenterY);
+                    formData.append('gradient_center_x', document.getElementById('gradient-center-x').value);
+                    formData.append('gradient_center_y', document.getElementById('gradient-center-y').value);
                 }
             }
         }
         
-        // Options spécifiques à l'onglet "predefined"
         else if (currentTab === 'predefined') {
             const styleName = document.querySelector('.style-option.selected')?.getAttribute('data-value') || 'classic';
             formData.append('style_name', styleName);
+            
+            // Error correction
+            const styleErrorCorrection = document.getElementById('style-error-correction')?.value || 1;
+            formData.append('error_correction', styleErrorCorrection);
         }
         
-        // Options spécifiques à l'onglet "social"
         else if (currentTab === 'social') {
-            const socialPlatform = document.querySelector('.social-platform.selected')?.getAttribute('data-value') || '';
+            const socialPlatform = document.querySelector('.social-platform.selected')?.getAttribute('data-value');
             
             if (socialPlatform) {
                 formData.append('social_platform', socialPlatform);
             } else {
-                showError('Veuillez sélectionner une plateforme sociale');
+                showError('Please select a social platform');
                 showLoading(false);
                 return;
             }
             
-            // Couleurs
+            // Colors
             const fillColor = document.getElementById('social-fill-color')?.value || '#000000';
             const backColor = document.getElementById('social-back-color')?.value || '#FFFFFF';
             
             formData.append('fill_color', fillColor);
             formData.append('back_color', backColor);
+            
+            // Use platform color
+            formData.append('use_platform_color', document.getElementById('use-platform-color')?.checked || false);
         }
         
-        // Options spécifiques à l'onglet "multi_social"
-        else if (currentTab === 'multi_social') {
-            const selectedPlatforms = document.querySelectorAll('.social-platform.selected');
-            
-            if (selectedPlatforms.length === 0) {
-                showError('Veuillez sélectionner au moins une plateforme sociale');
-                showLoading(false);
-                return;
-            }
-            
-            // Ajouter toutes les plateformes sélectionnées
-            selectedPlatforms.forEach(platform => {
-                formData.append('social_platforms', platform.getAttribute('data-value'));
-            });
-            
-            // Layout (disposition des icônes)
-            const layout = document.getElementById('social-layout')?.value || 'circle';
-            formData.append('layout', layout);
-            
-            // Couleurs
-            const fillColor = document.getElementById('multi-social-fill-color')?.value || '#000000';
-            const backColor = document.getElementById('multi-social-back-color')?.value || '#FFFFFF';
-            
-            formData.append('fill_color', fillColor);
-            formData.append('back_color', backColor);
-        }
-        
-        // Options spécifiques à l'onglet "custom_shape"
-        else if (currentTab === 'custom_shape') {
-            const moduleShape = document.querySelector('.module-shape.selected')?.getAttribute('data-value') || 'square';
-            const frameShape = document.querySelector('.frame-shape.selected')?.getAttribute('data-value') || 'square';
-            const eyeShape = document.querySelector('.eye-shape.selected')?.getAttribute('data-value') || 'square';
-            
-            formData.append('module_shape', moduleShape);
-            formData.append('frame_shape', frameShape);
-            formData.append('eye_shape', eyeShape);
-            
-            // Couleurs
-            const fillColor = document.getElementById('custom-shape-fill-color')?.value || '#000000';
-            const backColor = document.getElementById('custom-shape-back-color')?.value || '#FFFFFF';
-            
-            formData.append('fill_color', fillColor);
-            formData.append('back_color', backColor);
-        }
-        
-        // Envoi de la requête AJAX
+        // Ajax request
         fetch('/generate', {
             method: 'POST',
             body: formData
         })
         .then(response => {
             if (!response.ok) {
-                throw new Error('Erreur lors de la génération du QR code');
+                throw new Error('Error generating QR code');
             }
             return response.json();
         })
         .then(data => {
             if (data.success) {
-                // Mise à jour de l'aperçu
-                qrPreview.src = `/qrcodes/${data.qr_path}`;
+                // Update preview
+                qrPreview.src = `/qrcodes/${data.qr_path}?${new Date().getTime()}`; // Add timestamp to avoid caching
                 
-                // Enregistrement du chemin du QR code généré
+                // Store the QR code path
                 currentQRPath = data.qr_path;
                 
-                // Activer les boutons d'exportation
+                // Enable export buttons
                 enableExportButtons();
                 
-                // Afficher un message de succès
-                showSuccess('QR code généré avec succès');
+                // Show success message
+                showSuccess('QR code generated successfully');
             } else {
-                showError(data.error || 'Erreur lors de la génération du QR code');
+                showError(data.error || 'Error generating QR code');
             }
         })
         .catch(error => {
-            console.error('Erreur:', error);
-            showError('Erreur lors de la génération du QR code');
+            console.error('Error:', error);
+            showError('Error generating QR code');
         })
         .finally(() => {
             showLoading(false);
         });
     }
 
-    /**
-     * Génère une prévisualisation du QR code avec les options actuelles
-     */
     function generatePreview() {
-        // Vérifier que des données sont présentes
-        if (!qrDataInput || !qrDataInput.value.trim()) {
+        // Skip if preview is already in progress
+        if (previewInProgress) {
             return;
         }
         
-        // Récupérer les options en fonction de l'onglet actif
-        const formData = new FormData();
-        formData.append('data', qrDataInput.value.trim());
+        // Get data from active tab
+        const activeDataInput = document.querySelector(`#tab-${currentTab} [id^="qr-data"]`);
+        if (!activeDataInput || !activeDataInput.value.trim()) {
+            return;
+        }
         
-        // Type de prévisualisation en fonction de l'onglet actif
+        // Skip if data and options haven't changed
+        const currentData = activeDataInput.value.trim();
+        const currentOptions = getPreviewOptions();
+        
+        if (currentData === lastQRData && JSON.stringify(currentOptions) === JSON.stringify(lastOptions)) {
+            return;
+        }
+        
+        // Update last values
+        lastQRData = currentData;
+        lastOptions = currentOptions;
+        
+        // Set preview in progress flag
+        previewInProgress = true;
+        
+        // Add loading effect to preview
+        if (qrPreviewContainer) {
+            qrPreviewContainer.classList.add('loading');
+        }
+        
+        // Get options based on active tab
+        const formData = new FormData();
+        formData.append('data', currentData);
+        
+        // Preview type based on active tab
         formData.append('preview_type', currentTab);
         
-        // Options communes
+        // Common options
         const version = document.getElementById('qr-version')?.value || 1;
         const errorCorrection = document.getElementById('qr-error-correction')?.value || 1;
         const boxSize = document.getElementById('qr-box-size')?.value || 10;
@@ -547,44 +667,55 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('box_size', boxSize);
         formData.append('border', border);
         
-        // Options spécifiques à l'onglet "custom"
+        // Tab-specific options
         if (currentTab === 'custom') {
             const fillColor = document.getElementById('fill-color')?.value || '#000000';
             const backColor = document.getElementById('back-color')?.value || '#FFFFFF';
             
             formData.append('fill_color', fillColor);
             formData.append('back_color', backColor);
+            
+            // Custom shapes
+            const moduleShape = document.querySelector('.module-shape.selected')?.getAttribute('data-value') || 'square';
+            const frameShape = document.querySelector('.frame-shape.selected')?.getAttribute('data-value') || 'square';
+            const eyeShape = document.querySelector('.eye-shape.selected')?.getAttribute('data-value') || 'square';
+            
+            formData.append('module_shape', moduleShape);
+            formData.append('frame_shape', frameShape);
+            formData.append('eye_shape', eyeShape);
         }
         
-        // Options spécifiques à l'onglet "logo"
         else if (currentTab === 'logo') {
-            // Logo (si présent dans l'aperçu)
+            // Logo (if present in preview)
             const logoPreview = document.getElementById('logo-preview');
             if (logoPreview && logoPreview.style.display !== 'none' && logoPreview.src) {
                 formData.append('logo_data', logoPreview.src);
             }
             
-            // Taille du logo
+            // Logo size
             const logoSize = document.getElementById('logo-size')?.value || 0.2;
             formData.append('logo_size', logoSize);
             
-            // Couleurs
+            // Colors
             const fillColor = document.getElementById('logo-fill-color')?.value || '#000000';
             const backColor = document.getElementById('logo-back-color')?.value || '#FFFFFF';
             
             formData.append('fill_color', fillColor);
             formData.append('back_color', backColor);
+            
+            // Error correction for logo should be higher
+            const logoErrorCorrection = document.getElementById('logo-error-correction')?.value || 3;
+            formData.append('error_correction', logoErrorCorrection);
         }
         
-        // Options spécifiques à l'onglet "styled"
         else if (currentTab === 'styled') {
-            const moduleDrawer = document.querySelector('.module-shape.selected')?.getAttribute('data-value') || 'square';
+            const moduleDrawer = document.getElementById('module-drawer')?.value || 'square';
             const colorMask = document.getElementById('color-mask')?.value || 'solid';
             
             formData.append('module_drawer', moduleDrawer);
             formData.append('color_mask', colorMask);
             
-            // Couleurs pour le masque
+            // Colors for the mask
             if (colorMask === 'solid') {
                 const frontColor = document.getElementById('front-color')?.value || '#000000';
                 const backColor = document.getElementById('back-color')?.value || '#FFFFFF';
@@ -592,7 +723,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 formData.append('front_color', frontColor);
                 formData.append('back_color', backColor);
             } else {
-                // Options pour les gradients
+                // Gradient options
                 const frontColor = document.getElementById('gradient-start-color')?.value || '#000000';
                 const edgeColor = document.getElementById('gradient-end-color')?.value || '#666666';
                 const backColor = document.getElementById('gradient-back-color')?.value || '#FFFFFF';
@@ -601,104 +732,144 @@ document.addEventListener('DOMContentLoaded', function() {
                 formData.append('edge_color', edgeColor);
                 formData.append('back_color', backColor);
                 
-                // Centre du gradient
+                // Gradient center
                 if (document.getElementById('gradient-center-x') && document.getElementById('gradient-center-y')) {
-                    const gradientCenterX = document.getElementById('gradient-center-x').value;
-                    const gradientCenterY = document.getElementById('gradient-center-y').value;
-                    
-                    formData.append('gradient_center_x', gradientCenterX);
-                    formData.append('gradient_center_y', gradientCenterY);
+                    formData.append('gradient_center_x', document.getElementById('gradient-center-x').value);
+                    formData.append('gradient_center_y', document.getElementById('gradient-center-y').value);
                 }
             }
         }
         
-        // Options spécifiques à l'onglet "predefined"
         else if (currentTab === 'predefined') {
             const styleName = document.querySelector('.style-option.selected')?.getAttribute('data-value') || 'classic';
             formData.append('style_name', styleName);
+            
+            // Error correction
+            const styleErrorCorrection = document.getElementById('style-error-correction')?.value || 1;
+            formData.append('error_correction', styleErrorCorrection);
         }
         
-        // Options spécifiques à l'onglet "social"
         else if (currentTab === 'social') {
             const socialPlatform = document.querySelector('.social-platform.selected')?.getAttribute('data-value');
             
             if (socialPlatform) {
                 formData.append('social_platform', socialPlatform);
                 
-                // Couleurs
+                // Colors
                 const fillColor = document.getElementById('social-fill-color')?.value || '#000000';
                 const backColor = document.getElementById('social-back-color')?.value || '#FFFFFF';
                 
                 formData.append('fill_color', fillColor);
                 formData.append('back_color', backColor);
+                
+                // Use platform color
+                formData.append('use_platform_color', document.getElementById('use-platform-color')?.checked || false);
             }
         }
         
-        // Options spécifiques à l'onglet "custom_shape"
-        else if (currentTab === 'custom_shape') {
-            const moduleShape = document.querySelector('.module-shape.selected')?.getAttribute('data-value') || 'square';
-            const frameShape = document.querySelector('.frame-shape.selected')?.getAttribute('data-value') || 'square';
-            const eyeShape = document.querySelector('.eye-shape.selected')?.getAttribute('data-value') || 'square';
-            
-            formData.append('module_shape', moduleShape);
-            formData.append('frame_shape', frameShape);
-            formData.append('eye_shape', eyeShape);
-            
-            // Couleurs
-            const fillColor = document.getElementById('custom-shape-fill-color')?.value || '#000000';
-            const backColor = document.getElementById('custom-shape-back-color')?.value || '#FFFFFF';
-            
-            formData.append('fill_color', fillColor);
-            formData.append('back_color', backColor);
-        }
-        
-        // Envoi de la requête AJAX
+        // Ajax request
         fetch('/preview', {
             method: 'POST',
             body: formData
         })
         .then(response => {
             if (!response.ok) {
-                throw new Error('Erreur lors de la génération de la prévisualisation');
+                throw new Error('Error generating preview');
             }
             return response.json();
         })
         .then(data => {
             if (data.success) {
-                // Mise à jour de l'aperçu
+                // Update preview
                 qrPreview.src = data.preview;
             }
         })
         .catch(error => {
-            console.error('Erreur de prévisualisation:', error);
-            // Ne pas afficher d'erreur pour ne pas perturber l'expérience utilisateur
+            console.error('Preview error:', error);
+            // Don't show error to avoid disrupting the user experience
+        })
+        .finally(() => {
+            // Remove loading effect
+            if (qrPreviewContainer) {
+                qrPreviewContainer.classList.remove('loading');
+            }
+            
+            // Reset preview in progress flag
+            previewInProgress = false;
         });
     }
+    
+    function getPreviewOptions() {
+        // Collect current options for comparison
+        const options = {
+            tab: currentTab,
+            version: document.getElementById('qr-version')?.value,
+            errorCorrection: document.getElementById('qr-error-correction')?.value,
+            boxSize: document.getElementById('qr-box-size')?.value,
+            border: document.getElementById('qr-border')?.value
+        };
+        
+        // Tab-specific options
+        if (currentTab === 'custom') {
+            options.fillColor = document.getElementById('fill-color')?.value;
+            options.backColor = document.getElementById('back-color')?.value;
+            options.moduleShape = document.querySelector('.module-shape.selected')?.getAttribute('data-value');
+            options.frameShape = document.querySelector('.frame-shape.selected')?.getAttribute('data-value');
+            options.eyeShape = document.querySelector('.eye-shape.selected')?.getAttribute('data-value');
+        }
+        else if (currentTab === 'logo') {
+            options.logoSize = document.getElementById('logo-size')?.value;
+            options.fillColor = document.getElementById('logo-fill-color')?.value;
+            options.backColor = document.getElementById('logo-back-color')?.value;
+            options.errorCorrection = document.getElementById('logo-error-correction')?.value;
+        }
+        else if (currentTab === 'styled') {
+            options.moduleDrawer = document.getElementById('module-drawer')?.value;
+            options.colorMask = document.getElementById('color-mask')?.value;
+            if (options.colorMask === 'solid') {
+                options.frontColor = document.getElementById('front-color')?.value;
+                options.backColor = document.getElementById('back-color')?.value;
+            } else {
+                options.frontColor = document.getElementById('gradient-start-color')?.value;
+                options.edgeColor = document.getElementById('gradient-end-color')?.value;
+                options.backColor = document.getElementById('gradient-back-color')?.value;
+                options.gradientCenterX = document.getElementById('gradient-center-x')?.value;
+                options.gradientCenterY = document.getElementById('gradient-center-y')?.value;
+            }
+        }
+        else if (currentTab === 'predefined') {
+            options.styleName = document.querySelector('.style-option.selected')?.getAttribute('data-value');
+            options.errorCorrection = document.getElementById('style-error-correction')?.value;
+        }
+        else if (currentTab === 'social') {
+            options.socialPlatform = document.querySelector('.social-platform.selected')?.getAttribute('data-value');
+            options.fillColor = document.getElementById('social-fill-color')?.value;
+            options.backColor = document.getElementById('social-back-color')?.value;
+            options.usePlatformColor = document.getElementById('use-platform-color')?.checked;
+        }
+        
+        return options;
+    }
 
-    // ------- Exportation de QR code -------
-
-    /**
-     * Exporte le QR code dans le format spécifié
-     * @param {string} format - Format d'exportation (png, svg, pdf, eps, etc.)
-     */
+    // ===== Export QR Code =====
     function exportQRCode(format) {
-        // Vérifier qu'un QR code a été généré
+        // Verify that a QR code has been generated
         if (!currentQRPath) {
-            showError('Veuillez d\'abord générer un QR code');
+            showError('Please generate a QR code first');
             return;
         }
         
-        // Afficher un indicateur de chargement
+        // Show loading indicator
         showLoading(true);
         
-        // Récupérer les options d'exportation
+        // Get export options
         const formData = new FormData();
         formData.append('qr_path', currentQRPath);
         formData.append('export_format', format);
         
-        // Options spécifiques au format
+        // Format-specific options
         if (format === 'png') {
-            // Options pour PNG
+            // PNG options
             const dpi = document.getElementById('png-dpi')?.value || 300;
             const quality = document.getElementById('png-quality')?.value || 95;
             
@@ -707,29 +878,23 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Dimensions
             if (document.getElementById('png-width') && document.getElementById('png-height')) {
-                const width = document.getElementById('png-width').value;
-                const height = document.getElementById('png-height').value;
-                
-                formData.append('size_width', width);
-                formData.append('size_height', height);
+                formData.append('size_width', document.getElementById('png-width').value);
+                formData.append('size_height', document.getElementById('png-height').value);
             }
         }
         else if (format === 'svg') {
-            // Options pour SVG
+            // SVG options
             const scale = document.getElementById('svg-scale')?.value || 1;
             formData.append('scale', scale);
             
             // Dimensions
             if (document.getElementById('svg-width') && document.getElementById('svg-height')) {
-                const width = document.getElementById('svg-width').value;
-                const height = document.getElementById('svg-height').value;
-                
-                formData.append('size_width', width);
-                formData.append('size_height', height);
+                formData.append('size_width', document.getElementById('svg-width').value);
+                formData.append('size_height', document.getElementById('svg-height').value);
             }
         }
         else if (format === 'pdf') {
-            // Options pour PDF
+            // PDF options
             const title = document.getElementById('pdf-title')?.value || 'QR Code';
             const author = document.getElementById('pdf-author')?.value || 'QR Code Generator';
             
@@ -738,65 +903,66 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Dimensions
             if (document.getElementById('pdf-width') && document.getElementById('pdf-height')) {
-                const width = document.getElementById('pdf-width').value;
-                const height = document.getElementById('pdf-height').value;
-                
-                formData.append('size_width', width);
-                formData.append('size_height', height);
+                formData.append('size_width', document.getElementById('pdf-width').value);
+                formData.append('size_height', document.getElementById('pdf-height').value);
             }
             
             // Position
             if (document.getElementById('pdf-x') && document.getElementById('pdf-y')) {
-                const x = document.getElementById('pdf-x').value;
-                const y = document.getElementById('pdf-y').value;
-                
-                formData.append('position_x', x);
-                formData.append('position_y', y);
+                formData.append('position_x', document.getElementById('pdf-x').value);
+                formData.append('position_y', document.getElementById('pdf-y').value);
             }
         }
         else if (format === 'eps') {
-            // Options pour EPS
+            // EPS options
             const dpi = document.getElementById('eps-dpi')?.value || 300;
             formData.append('dpi', dpi);
         }
         
-        // Envoi de la requête AJAX
+        // Ajax request
         fetch('/export', {
             method: 'POST',
             body: formData
         })
         .then(response => {
             if (!response.ok) {
-                throw new Error('Erreur lors de l\'exportation du QR code');
+                throw new Error('Error exporting QR code');
             }
             return response.json();
         })
         .then(data => {
             if (data.success) {
-                // Téléchargement du fichier exporté
-                window.location.href = data.download_url;
+                // Download the exported file
+                if (format === 'all') {
+                    // For all formats, we get a ZIP with all files
+                    window.location.href = data.download_urls.zip;
+                } else {
+                    window.location.href = data.download_url;
+                }
                 
-                // Afficher un message de succès
-                showSuccess(`QR code exporté avec succès en format ${format.toUpperCase()}`);
+                // Show success message
+                showSuccess(`QR code exported successfully as ${format.toUpperCase()}`);
+                
+                // Update download link
+                if (downloadLink) {
+                    downloadLink.href = data.download_url;
+                    downloadLink.style.display = 'inline-block';
+                    downloadLink.textContent = `Download ${format.toUpperCase()}`;
+                }
             } else {
-                showError(data.error || 'Erreur lors de l\'exportation du QR code');
+                showError(data.error || 'Error exporting QR code');
             }
         })
         .catch(error => {
-            console.error('Erreur:', error);
-            showError('Erreur lors de l\'exportation du QR code');
+            console.error('Error:', error);
+            showError('Error exporting QR code');
         })
         .finally(() => {
             showLoading(false);
         });
     }
 
-    // ------- Utilitaires -------
-
-    /**
-     * Active ou désactive les boutons d'exportation
-     * @param {boolean} enable - Activer (true) ou désactiver (false) les boutons
-     */
+    // ===== Utilities =====
     function enableExportButtons(enable = true) {
         exportButtons.forEach(button => {
             button.disabled = !enable;
@@ -806,12 +972,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 button.classList.add('disabled');
             }
         });
+        
+        // Show the download section
+        const downloadContainer = document.querySelector('.download-container');
+        if (downloadContainer) {
+            downloadContainer.style.display = enable ? 'block' : 'none';
+        }
     }
 
-    /**
-     * Affiche ou masque l'indicateur de chargement
-     * @param {boolean} show - Afficher (true) ou masquer (false) l'indicateur
-     */
     function showLoading(show) {
         const loadingIndicator = document.getElementById('loading-indicator');
         if (loadingIndicator) {
@@ -819,95 +987,37 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    /**
-     * Affiche un message d'erreur
-     * @param {string} message - Message d'erreur à afficher
-     */
     function showError(message) {
         const errorContainer = document.getElementById('error-container');
         if (errorContainer) {
             errorContainer.textContent = message;
             errorContainer.style.display = 'block';
             
-            // Masquer après 5 secondes
+            // Hide after 5 seconds
             setTimeout(() => {
                 errorContainer.style.display = 'none';
             }, 5000);
         }
     }
 
-    /**
-     * Affiche un message de succès
-     * @param {string} message - Message de succès à afficher
-     */
     function showSuccess(message) {
         const successContainer = document.getElementById('success-container');
         if (successContainer) {
             successContainer.textContent = message;
             successContainer.style.display = 'block';
             
-            // Masquer après 3 secondes
+            // Hide after 3 seconds
             setTimeout(() => {
                 successContainer.style.display = 'none';
             }, 3000);
         }
     }
 
-    /**
-     * Fonction debounce pour éviter trop de requêtes lors des modifications rapides
-     */
     function debouncePreview() {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(generatePreview, DEBOUNCE_DELAY);
     }
 
-    // --------- Fonctions pour l'affichage dynamique des options ---------
-
-    /**
-     * Met à jour les options affichées en fonction du masque de couleur sélectionné
-     */
-    document.addEventListener('change', function(event) {
-        if (event.target.id === 'color-mask') {
-            const colorMask = event.target.value;
-            
-            // Masquer tous les conteneurs d'options
-            document.querySelectorAll('.color-mask-options').forEach(container => {
-                container.style.display = 'none';
-            });
-            
-            // Afficher le conteneur correspondant au masque sélectionné
-            const selectedContainer = document.getElementById(`${colorMask}-options`);
-            if (selectedContainer) {
-                selectedContainer.style.display = 'block';
-            }
-            
-            // Générer une prévisualisation avec le nouveau masque
-            debouncePreview();
-        }
-    });
-
-    /**
-     * Met à jour l'affichage en fonction de la disposition des icônes sélectionnée
-     */
-    document.addEventListener('change', function(event) {
-        if (event.target.id === 'social-layout') {
-            // Mettre à jour la classe CSS pour l'affichage des icônes
-            const layout = event.target.value;
-            
-            const socialIconsPreview = document.getElementById('social-icons-preview');
-            if (socialIconsPreview) {
-                // Supprimer toutes les classes de disposition
-                socialIconsPreview.classList.remove('layout-circle', 'layout-line', 'layout-grid');
-                
-                // Ajouter la classe de la disposition sélectionnée
-                socialIconsPreview.classList.add(`layout-${layout}`);
-            }
-            
-            // Générer une prévisualisation avec la nouvelle disposition
-            debouncePreview();
-        }
-    });
-
-    // --------- Initialisation de l'application ---------
+    // ===== Initialize Application =====
     init();
 });
