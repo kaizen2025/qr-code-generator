@@ -2,102 +2,64 @@
 # -*- coding: utf-8 -*-
 
 """
-Script pour initialiser les dossiers et fichiers statiques nécessaires
-sur l'environnement Render. À exécuter au démarrage.
+Script d'initialisation pour Render - Prépare l'environnement et les fichiers nécessaires
 """
 
 import os
-import shutil
-import qrcode
-from PIL import Image
+import sys
+from style_generator import QRStyleGenerator
 
-# Création des dossiers nécessaires avec des droits d'accès corrects
 def setup_directories():
-    # Définition des chemins de base
-    base_dir = os.environ.get('RENDER_PROJECT_DIR', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    static_dir = os.path.join(base_dir, 'src', 'frontend', 'static')
-    img_dir = os.path.join(static_dir, 'img')
-    styles_dir = os.path.join(img_dir, 'styles')
+    """Crée les dossiers requis pour l'application"""
+    base_dir = os.environ.get('RENDER_PROJECT_DIR', os.getcwd())
     
-    # Dossiers pour les fichiers générés
-    uploads_dir = os.path.join(base_dir, 'uploads')
-    qrcodes_dir = os.path.join(base_dir, 'generated_qrcodes')
-    exported_dir = os.path.join(base_dir, 'exported_qrcodes')
+    # Définition des chemins
+    if os.environ.get('RENDER'):
+        upload_dir = '/tmp/uploads'
+        qrcodes_dir = '/tmp/generated_qrcodes'
+        exported_dir = '/tmp/exported_qrcodes'
+        static_dir = '/tmp/static'
+    else:
+        upload_dir = os.path.join(base_dir, 'uploads')
+        qrcodes_dir = os.path.join(base_dir, 'generated_qrcodes')
+        exported_dir = os.path.join(base_dir, 'exported_qrcodes')
+        static_dir = os.path.join(base_dir, 'src', 'frontend', 'static')
     
-    # Création des dossiers s'ils n'existent pas
-    for directory in [img_dir, styles_dir, uploads_dir, qrcodes_dir, exported_dir]:
+    # Création des dossiers
+    for directory in [upload_dir, qrcodes_dir, exported_dir, static_dir]:
         os.makedirs(directory, exist_ok=True)
-        # S'assurer que les permissions sont correctes (lecture/écriture)
+        # Permissions correctes
         os.chmod(directory, 0o755)
     
+    # Création du dossier pour les styles
+    styles_dir = os.path.join(static_dir, 'img', 'styles')
+    os.makedirs(styles_dir, exist_ok=True)
+    
     return {
-        'styles_dir': styles_dir,
-        'uploads_dir': uploads_dir,
+        'upload_dir': upload_dir,
         'qrcodes_dir': qrcodes_dir,
-        'exported_dir': exported_dir
+        'exported_dir': exported_dir,
+        'static_dir': static_dir,
+        'styles_dir': styles_dir
     }
 
-# Génération des images de styles (prévisualisations)
-def generate_style_images(styles_dir):
-    styles = {
-        'classic': {'module_drawer': 'square', 'color': "#000000"},
-        'rounded': {'module_drawer': 'rounded', 'color': "#000000"},
-        'dots': {'module_drawer': 'circle', 'color': "#000000"},
-        'modern_blue': {'module_drawer': 'rounded', 'color': "#0066CC"},
-        'sunset': {'module_drawer': 'circle', 'color': "#FF6600"},
-        'forest': {'module_drawer': 'square', 'color': "#006600"},
-        'ocean': {'module_drawer': 'rounded', 'color': "#0099CC"},
-        'barcode': {'module_drawer': 'vertical_bars', 'color': "#000000"},
-        'elegant': {'module_drawer': 'gapped_square', 'color': "#333333"}
-    }
-    
-    # Génération d'un QR code de base pour chaque style
-    for style_name, style_options in styles.items():
-        qr = qrcode.QRCode(
-            version=1,
-            error_correction=qrcode.constants.ERROR_CORRECT_L,
-            box_size=10,
-            border=4,
-        )
-        qr.add_data("https://example.com")
-        qr.make(fit=True)
-        
-        img = qr.make_image(fill_color=style_options['color'], back_color="white")
-        img.save(os.path.join(styles_dir, f"{style_name}.png"))
-        
-    print(f"Images de styles générées dans: {styles_dir}")
-
-# Création d'un QR code de test pour vérifier les permissions
-def create_test_qrcode(qrcodes_dir):
-    qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_L,
-        box_size=10,
-        border=4,
-    )
-    qr.add_data("https://test.com")
-    qr.make(fit=True)
-    
-    img = qr.make_image(fill_color="black", back_color="white")
-    test_path = os.path.join(qrcodes_dir, "test_qrcode.png")
-    img.save(test_path)
-    
-    # Vérifier que le fichier est accessible en lecture
-    os.chmod(test_path, 0o644)
-    print(f"QR code de test créé: {test_path}")
-
-# Fonction principale
 def main():
-    print("Initialisation de l'environnement Render...")
+    """Fonction principale d'initialisation"""
+    print("Initialisation de l'environnement...")
     directories = setup_directories()
     
-    # Génération des images de styles
-    generate_style_images(directories['styles_dir'])
+    # Génération des styles QR
+    print("Génération des styles QR...")
+    style_generator = QRStyleGenerator(directories['styles_dir'])
+    styles = style_generator.generate_style_samples()
+    print(f"Styles générés: {len(styles)}")
     
-    # Création d'un QR code de test
-    create_test_qrcode(directories['qrcodes_dir'])
+    # Création d'un fichier pour indiquer que l'initialisation est terminée
+    with open(os.path.join(directories['static_dir'], 'init_complete.txt'), 'w') as f:
+        f.write("Initialisation terminée le " + os.popen('date').read())
     
     print("Initialisation terminée avec succès")
 
 if __name__ == "__main__":
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     main()
