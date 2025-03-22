@@ -50,17 +50,14 @@ else:
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Configuration de l'application with better path handling
-for folder in [app.config['UPLOAD_FOLDER'], app.config['GENERATED_FOLDER'], app.config['EXPORTED_FOLDER']]:
-    os.makedirs(folder, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = os.path.join(BASE_DIR, 'uploads')
 app.config['GENERATED_FOLDER'] = os.path.join(BASE_DIR, 'generated_qrcodes')
 app.config['EXPORTED_FOLDER'] = os.path.join(BASE_DIR, 'exported_qrcodes')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max upload size
 
-# Création des dossiers nécessaires s'ils n'existent pas
+# Création des dossiers nécessaires
 for folder in [app.config['UPLOAD_FOLDER'], app.config['GENERATED_FOLDER'], app.config['EXPORTED_FOLDER']]:
-    if not os.path.exists(folder):
-        os.makedirs(folder)
+    os.makedirs(folder, exist_ok=True)
 
 # Initialisation des classes backend
 qr_generator = QRCodeGenerator(output_dir=app.config['GENERATED_FOLDER'])
