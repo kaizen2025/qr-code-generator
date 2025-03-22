@@ -1,507 +1,655 @@
-// script.js - Version améliorée
+/**
+ * Script principal pour le générateur de QR codes personnalisé
+ * Gère les interactions utilisateur, les requêtes AJAX et les mises à jour de l'interface
+ */
 
-// Attendre le chargement complet du DOM
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialisation des composants
-    initTabs();
-    initRangeSliders();
-    initColorPickers();
-    initStyleOptions();
-    initSocialOptions();
-    initShapeOptions();
-    initExportOptions();
-    initLivePreview();
-    initQRFormHandlers();
-    initExportHandlers();
-    initUploadHandlers();
-    initNotifications();
-    initUIEnhancements();
-    
-    // Vérification de l'état du serveur
-    checkServerStatus();
-});
-
-// Initialisation des onglets
-function initTabs() {
-    const tabButtons = document.querySelectorAll('.qr-tab');
+    // Éléments DOM principaux
+    const qrForm = document.getElementById('qr-form');
+    const qrDataInput = document.getElementById('qr-data');
+    const qrPreview = document.getElementById('qr-preview');
+    const generateBtn = document.getElementById('generate-btn');
+    const tabButtons = document.querySelectorAll('.tab-button');
     const tabContents = document.querySelectorAll('.tab-content');
+    const exportButtons = document.querySelectorAll('.export-button');
+    const colorPickers = document.querySelectorAll('.color-picker');
+    const rangeInputs = document.querySelectorAll('input[type="range"]');
+    const logoUpload = document.getElementById('logo-upload');
+    const styleOptions = document.querySelectorAll('.style-option');
+    const socialPlatforms = document.querySelectorAll('.social-platform');
+    const moduleShapes = document.querySelectorAll('.module-shape');
+    const frameShapes = document.querySelectorAll('.frame-shape');
+    const eyeShapes = document.querySelectorAll('.eye-shape');
     
-    // Afficher par défaut le premier onglet
-    if (tabContents.length > 0) {
-        tabContents[0].classList.add('active');
-    }
-    
-    tabButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const targetId = button.getAttribute('data-target');
-            
-            // Désactiver tous les onglets
-            tabButtons.forEach(btn => btn.classList.remove('active'));
-            tabContents.forEach(content => content.classList.remove('active'));
-            
-            // Activer l'onglet sélectionné
-            button.classList.add('active');
-            document.getElementById(targetId).classList.add('active');
-        });
-    });
-}
+    // Variables globales
+    let currentQRPath = null;
+    let currentTab = 'basic'; // Tab par défaut
+    let debounceTimer;
+    const DEBOUNCE_DELAY = 300; // Délai pour éviter trop de requêtes lors des changements rapides
 
-// Initialisation des sliders avec affichage des valeurs
-function initRangeSliders() {
-    const rangeSliders = document.querySelectorAll('.form-range');
-    
-    rangeSliders.forEach(slider => {
-        const valueDisplay = document.getElementById(`${slider.id}Value`);
-        if (valueDisplay) {
-            // Affichage initial
-            valueDisplay.textContent = slider.value;
-            
-            // Mise à jour en temps réel
-            slider.addEventListener('input', () => {
-                valueDisplay.textContent = slider.value;
-                
-                // Déclencher l'événement pour la prévisualisation en direct
-                slider.dispatchEvent(new Event('change', { bubbles: true }));
-            });
-        }
-    });
-    
-    // Gestion spéciale pour les sliders de pourcentage (ex: taille du logo)
-    const percentageSliders = document.querySelectorAll('.percentage-slider');
-    percentageSliders.forEach(slider => {
-        const valueDisplay = document.getElementById(`${slider.id}Value`);
-        if (valueDisplay) {
-            // Affichage initial en pourcentage
-            valueDisplay.textContent = `${Math.round(slider.value * 100)}%`;
-            
-            // Mise à jour en temps réel
-            slider.addEventListener('input', () => {
-                valueDisplay.textContent = `${Math.round(slider.value * 100)}%`;
-                slider.dispatchEvent(new Event('change', { bubbles: true }));
-            });
-        }
-    });
-}
+    // ------- Initialisation -------
 
-// Initialisation des sélecteurs de couleur
-function initColorPickers() {
-    const colorInputs = document.querySelectorAll('.color-input');
-    
-    colorInputs.forEach(input => {
-        const preview = document.querySelector(`.color-preview[data-for="${input.id}"]`);
-        if (preview) {
-            // Mise à jour initiale
-            preview.style.backgroundColor = input.value;
-            
-            // Mise à jour quand la couleur change
-            input.addEventListener('input', () => {
-                preview.style.backgroundColor = input.value;
-                input.dispatchEvent(new Event('change', { bubbles: true }));
-            });
-            
-            // Ouvrir le sélecteur quand on clique sur la prévisualisation
-            preview.addEventListener('click', () => {
-                input.click();
-            });
-        }
-    });
-    
-    // Options pour utiliser les couleurs de marque pour les icônes sociales
-    const brandColorCheckbox = document.getElementById('useBrandedColors');
-    if (brandColorCheckbox) {
-        brandColorCheckbox.addEventListener('change', function() {
-            const fillColorInput = document.getElementById('socialFillColor');
-            if (fillColorInput) {
-                fillColorInput.disabled = this.checked;
-                
-                // Mettre à jour la couleur si une plateforme est sélectionnée
-                if (this.checked) {
-                    const selectedPlatform = document.querySelector('input[name="social_platform"]:checked');
-                    if (selectedPlatform) {
-                        updateSocialBrandColor(selectedPlatform.value);
-                    }
-                }
-            }
-        });
-    }
-}
-
-// Initialisation des options de style prédéfini
-function initStyleOptions() {
-    const styleOptions = document.querySelectorAll('input[name="style_name"]');
-    
-    styleOptions.forEach(option => {
-        const container = option.closest('.style-option');
-        if (container) {
-            const preview = container.querySelector('.style-preview');
-            
-            // Marquer l'option active
-            if (option.checked && preview) {
-                preview.classList.add('active');
-            }
-            
-            // Gestion du clic sur la prévisualisation
-            if (preview) {
-                preview.addEventListener('click', () => {
-                    option.checked = true;
-                    
-                    // Désélectionner toutes les autres prévisualisations
-                    document.querySelectorAll('.style-preview').forEach(p => {
-                        p.classList.remove('active');
-                    });
-                    
-                    // Sélectionner celle-ci
-                    preview.classList.add('active');
-                    
-                    // Déclencher l'événement change pour la prévisualisation
-                    option.dispatchEvent(new Event('change', { bubbles: true }));
-                });
-            }
-        }
-    });
-}
-
-// Initialisation des options de réseaux sociaux
-function initSocialOptions() {
-    const socialOptions = document.querySelectorAll('input[name="social_platform"]');
-    
-    socialOptions.forEach(option => {
-        const container = option.closest('.social-icon-item');
-        if (container) {
-            const preview = container.querySelector('.social-icon-preview');
-            
-            // Marquer l'option active
-            if (option.checked && preview) {
-                preview.classList.add('active');
-            }
-            
-            // Gestion du clic sur la prévisualisation
-            if (preview) {
-                preview.addEventListener('click', () => {
-                    option.checked = true;
-                    
-                    // Désélectionner toutes les autres prévisualisations
-                    document.querySelectorAll('.social-icon-preview').forEach(p => {
-                        p.classList.remove('active');
-                    });
-                    
-                    // Sélectionner celle-ci
-                    preview.classList.add('active');
-                    
-                    // Mise à jour de la couleur de marque si l'option est cochée
-                    if (document.getElementById('useBrandedColors')?.checked) {
-                        updateSocialBrandColor(option.value);
-                    }
-                    
-                    // Déclencher l'événement change pour la prévisualisation
-                    option.dispatchEvent(new Event('change', { bubbles: true }));
-                });
-            }
-        }
-    });
-    
-    // Options de mise en page pour les réseaux sociaux multiples
-    const layoutOptions = document.querySelectorAll('input[name="layout"]');
-    layoutOptions.forEach(option => {
-        option.addEventListener('change', () => {
-            // Déclencher la prévisualisation du QR code
-            const form = option.closest('form');
-            if (form) {
-                updateLivePreview(form);
-            }
-        });
-    });
-    
-    // Sélection multiple de réseaux sociaux
-    const multiSocialCheckboxes = document.querySelectorAll('input[name="social_platforms[]"]');
-    multiSocialCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', () => {
-            // Déclencher la prévisualisation du QR code
-            const form = checkbox.closest('form');
-            if (form) {
-                updateLivePreview(form);
-            }
-        });
-    });
-}
-
-// Mise à jour de la couleur de marque pour un réseau social
-function updateSocialBrandColor(platform) {
-    // Couleurs de marque des principales plateformes
-    const brandColors = {
-        'facebook': '#1877F2',
-        'twitter': '#1DA1F2',
-        'instagram': '#E4405F',
-        'linkedin': '#0A66C2',
-        'youtube': '#FF0000',
-        'tiktok': '#000000',
-        'snapchat': '#FFFC00',
-        'pinterest': '#E60023',
-        'whatsapp': '#25D366',
-        'telegram': '#26A5E4',
-        'reddit': '#FF4500',
-        'github': '#181717',
-        'discord': '#5865F2',
-        'twitch': '#9146FF',
-        'email': '#EA4335',
-        'website': '#4285F4'
-    };
-    
-    const fillColorInput = document.getElementById('socialFillColor');
-    if (fillColorInput && platform in brandColors) {
-        fillColorInput.value = brandColors[platform];
+    /**
+     * Initialise les événements et l'état initial de l'application
+     */
+    function init() {
+        // Initialiser les onglets
+        initTabs();
         
-        // Mettre à jour la prévisualisation de couleur
-        const preview = document.querySelector(`.color-preview[data-for="socialFillColor"]`);
-        if (preview) {
-            preview.style.backgroundColor = brandColors[platform];
-        }
-    }
-}
-
-// Initialisation des options de formes (modules, yeux, cadres)
-function initShapeOptions() {
-    // Formes des modules
-    initShapeSelectors('module_shape');
-    
-    // Formes des yeux
-    initShapeSelectors('eye_shape');
-    
-    // Formes des cadres
-    initShapeSelectors('frame_shape');
-}
-
-// Fonction générique pour initialiser les sélecteurs de forme
-function initShapeSelectors(inputName) {
-    const shapeOptions = document.querySelectorAll(`input[name="${inputName}"]`);
-    
-    shapeOptions.forEach(option => {
-        const container = option.closest('.shape-item');
-        if (container) {
-            const preview = container.querySelector('.shape-preview');
-            
-            // Marquer l'option active
-            if (option.checked && preview) {
-                preview.classList.add('active');
-            }
-            
-            // Gestion du clic sur la prévisualisation
-            if (preview) {
-                preview.addEventListener('click', () => {
-                    option.checked = true;
-                    
-                    // Désélectionner toutes les autres prévisualisations du même groupe
-                    document.querySelectorAll(`input[name="${inputName}"]`).forEach(input => {
-                        const otherPreview = input.closest('.shape-item')?.querySelector('.shape-preview');
-                        if (otherPreview) {
-                            otherPreview.classList.remove('active');
-                        }
-                    });
-                    
-                    // Sélectionner celle-ci
-                    preview.classList.add('active');
-                    
-                    // Déclencher l'événement change pour la prévisualisation
-                    option.dispatchEvent(new Event('change', { bubbles: true }));
-                });
-            }
-        }
-    });
-}
-
-// Initialisation des options d'exportation
-function initExportOptions() {
-    const formatButtons = document.querySelectorAll('input[name="export_format"]');
-    
-    formatButtons.forEach(button => {
-        button.addEventListener('change', () => {
-            const format = button.value;
-            
-            // Masquer toutes les options spécifiques aux formats
-            document.querySelectorAll('.format-options').forEach(element => {
-                element.style.display = 'none';
-            });
-            
-            // Afficher les options pour le format sélectionné
-            const options = document.getElementById(`${format}Options`);
-            if (options) {
-                options.style.display = 'block';
-            }
-        });
-    });
-    
-    // Afficher les options du format sélectionné par défaut
-    const defaultFormat = document.querySelector('input[name="export_format"]:checked');
-    if (defaultFormat) {
-        defaultFormat.dispatchEvent(new Event('change'));
-    }
-    
-    // Même chose pour le modal d'exportation
-    const modalFormatButtons = document.querySelectorAll('input[name="modal_export_format"]');
-    
-    modalFormatButtons.forEach(button => {
-        button.addEventListener('change', () => {
-            const format = button.value;
-            
-            // Masquer toutes les options spécifiques aux formats
-            document.querySelectorAll('.modal-format-options').forEach(element => {
-                element.style.display = 'none';
-            });
-            
-            // Afficher les options pour le format sélectionné
-            const options = document.getElementById(`modal${format.charAt(0).toUpperCase() + format.slice(1)}Options`);
-            if (options) {
-                options.style.display = 'block';
-            }
-        });
-    });
-    
-    // Afficher les options du format sélectionné par défaut dans le modal
-    const defaultModalFormat = document.querySelector('input[name="modal_export_format"]:checked');
-    if (defaultModalFormat) {
-        defaultModalFormat.dispatchEvent(new Event('change'));
-    }
-}
-
-// Initialisation de la prévisualisation en temps réel
-function initLivePreview() {
-    // Liste des onglets et leurs formulaires
-    const tabForms = {
-        'basicTab': 'basicForm',
-        'customTab': 'customForm',
-        'logoTab': 'logoForm',
-        'styleTab': 'styleForm',
-        'socialTab': 'socialForm',
-        'multiSocialTab': 'multiSocialForm'
-    };
-    
-    // Surveiller les changements dans chaque formulaire
-    for (const [tabId, formId] of Object.entries(tabForms)) {
-        const form = document.getElementById(formId);
-        if (form) {
-            // Surveillance des changements dans les champs du formulaire
-            const formElements = form.querySelectorAll('input, select, textarea');
-            formElements.forEach(element => {
-                if (element.type === 'file') {
-                    // Les fichiers sont traités séparément
-                    return;
-                }
-                
-                element.addEventListener('change', () => {
-                    updateLivePreview(form);
-                });
-                
-                // Pour les champs de texte, surveiller également les frappes
-                if (element.tagName === 'TEXTAREA' || (element.tagName === 'INPUT' && 
-                    (element.type === 'text' || element.type === 'url' || element.type === 'tel' || element.type === 'email'))) {
-                    element.addEventListener('input', debounce(() => {
-                        updateLivePreview(form);
-                    }, 500)); // Délai de 500ms pour ne pas surcharger le serveur
-                }
-            });
-        }
-    }
-}
-
-// Fonction de debounce pour limiter les appels fréquents
-function debounce(func, delay) {
-    let timeout;
-    return function(...args) {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(this, args), delay);
-    };
-}
-
-// Mise à jour de la prévisualisation en temps réel
-function updateLivePreview(form) {
-    // Vérification des données minimales requises
-    const dataInput = form.querySelector('[name="data"]');
-    if (!dataInput || dataInput.value.trim() === '') {
-        return;
-    }
-    
-    // Détermination du type de prévisualisation
-    let previewType;
-    
-    if (form.id === 'basicForm') {
-        previewType = 'basic';
-    } else if (form.id === 'customForm') {
-        previewType = 'custom';
-    } else if (form.id === 'styleForm') {
-        previewType = 'styled';
-    } else if (form.id === 'logoForm') {
-        // Le logo nécessite un traitement spécial
-        return handleLogoPreview(form);
-    } else if (form.id === 'socialForm') {
-        previewType = 'social';
-    } else if (form.id === 'multiSocialForm') {
-        previewType = 'multi_social';
-    }
-    
-    // Préparation des données du formulaire
-    const formData = new FormData(form);
-    formData.append('preview_type', previewType);
-    
-    // Affichage d'un indicateur de chargement
-    const previewContainer = document.getElementById('qrPreview');
-    if (previewContainer) {
-        previewContainer.innerHTML = `
-            <div class="loading-container">
-                <div class="loading-spinner"></div>
-                <p class="loading-text">Génération de la prévisualisation...</p>
-            </div>
-        `;
-    }
-    
-    // Envoi de la requête AJAX
-    fetch('/preview', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`Erreur HTTP: ${response.status}`);
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.success && previewContainer) {
-            // Affichage de la prévisualisation
-            previewContainer.innerHTML = `
-                <img src="${data.preview}" class="qr-preview-image fade-in" alt="QR Code Preview">
-            `;
-        } else {
-            console.error('Erreur de prévisualisation:', data.error);
-        }
-    })
-    .catch(error => {
-        console.error('Erreur lors de la prévisualisation:', error);
-        // En cas d'erreur, ne pas modifier la prévisualisation actuelle
-    });
-}
-
-// Gestion spéciale pour la prévisualisation avec logo
-function handleLogoPreview(form) {
-    const logoFile = form.querySelector('#logoFile');
-    if (!logoFile || !logoFile.files || logoFile.files.length === 0) {
-        return;
-    }
-    
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const formData = new FormData(form);
-        formData.append('preview_type', 'logo');
-        formData.append('logo_data', e.target.result);
+        // Initialiser les sélecteurs de couleur
+        initColorPickers();
         
-        // Affichage d'un indicateur de chargement
-        const previewContainer = document.getElementById('qrPreview');
-        if (previewContainer) {
-            previewContainer.innerHTML = `
-                <div class="loading-container">
-                    <div class="loading-spinner"></div>
-                    <p class="loading-text">Génération de la prévisualisation...</p>
-                </div>
-            `;
+        // Initialiser les sliders
+        initRangeInputs();
+
+        // Événement de soumission du formulaire
+        if (qrForm) {
+            qrForm.addEventListener('submit', handleFormSubmit);
+        }
+
+        // Événements pour les modifications d'input (prévisualisation en temps réel)
+        if (qrDataInput) {
+            qrDataInput.addEventListener('input', debouncePreview);
+        }
+
+        // Initialiser tous les sélecteurs d'options
+        initOptionSelectors();
+        
+        // Initialiser l'upload de logo
+        initLogoUpload();
+        
+        // Initialiser les boutons d'exportation
+        initExportButtons();
+        
+        // Afficher la prévisualisation initiale si des données sont présentes
+        if (qrDataInput && qrDataInput.value) {
+            generatePreview();
+        }
+    }
+
+    // ------- Gestion des onglets -------
+
+    /**
+     * Initialise les onglets et leurs événements
+     */
+    function initTabs() {
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const tabId = button.getAttribute('data-tab');
+                switchTab(tabId);
+            });
+        });
+
+        // Activer l'onglet par défaut
+        if (tabButtons.length > 0) {
+            const defaultTab = tabButtons[0].getAttribute('data-tab');
+            switchTab(defaultTab);
+        }
+    }
+
+    /**
+     * Change l'onglet actif
+     * @param {string} tabId - ID de l'onglet à activer
+     */
+    function switchTab(tabId) {
+        // Mettre à jour l'onglet actif
+        tabButtons.forEach(button => {
+            if (button.getAttribute('data-tab') === tabId) {
+                button.classList.add('active');
+            } else {
+                button.classList.remove('active');
+            }
+        });
+
+        // Afficher le contenu de l'onglet actif
+        tabContents.forEach(content => {
+            if (content.getAttribute('id') === `tab-${tabId}`) {
+                content.classList.add('active');
+            } else {
+                content.classList.remove('active');
+            }
+        });
+
+        // Mettre à jour l'onglet courant
+        currentTab = tabId;
+        
+        // Générer une prévisualisation avec les options de l'onglet actif
+        generatePreview();
+    }
+
+    // ------- Gestion des couleurs -------
+
+    /**
+     * Initialise les sélecteurs de couleur
+     */
+    function initColorPickers() {
+        colorPickers.forEach(picker => {
+            picker.addEventListener('input', debouncePreview);
+        });
+    }
+
+    // ------- Gestion des sliders -------
+
+    /**
+     * Initialise les inputs de type range
+     */
+    function initRangeInputs() {
+        rangeInputs.forEach(input => {
+            // Mise à jour de la valeur affichée
+            const valueDisplay = document.getElementById(`${input.id}-value`);
+            if (valueDisplay) {
+                valueDisplay.textContent = input.value;
+                
+                input.addEventListener('input', () => {
+                    valueDisplay.textContent = input.value;
+                    debouncePreview();
+                });
+            } else {
+                input.addEventListener('input', debouncePreview);
+            }
+        });
+    }
+
+    // ------- Gestion des sélecteurs d'options -------
+
+    /**
+     * Initialise tous les sélecteurs d'options (styles, formes, etc.)
+     */
+    function initOptionSelectors() {
+        // Options de style
+        styleOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                // Désélectionner toutes les options
+                styleOptions.forEach(opt => opt.classList.remove('selected'));
+                
+                // Sélectionner l'option cliquée
+                option.classList.add('selected');
+                
+                // Générer la prévisualisation
+                debouncePreview();
+            });
+        });
+
+        // Plateformes sociales
+        socialPlatforms.forEach(platform => {
+            platform.addEventListener('click', () => {
+                // Toggle de la sélection (pour permettre la sélection multiple)
+                platform.classList.toggle('selected');
+                
+                // Générer la prévisualisation
+                debouncePreview();
+            });
+        });
+
+        // Formes de modules
+        moduleShapes.forEach(shape => {
+            shape.addEventListener('click', () => {
+                // Désélectionner toutes les formes
+                moduleShapes.forEach(s => s.classList.remove('selected'));
+                
+                // Sélectionner la forme cliquée
+                shape.classList.add('selected');
+                
+                // Générer la prévisualisation
+                debouncePreview();
+            });
+        });
+
+        // Formes de contour
+        frameShapes.forEach(shape => {
+            shape.addEventListener('click', () => {
+                // Désélectionner toutes les formes
+                frameShapes.forEach(s => s.classList.remove('selected'));
+                
+                // Sélectionner la forme cliquée
+                shape.classList.add('selected');
+                
+                // Générer la prévisualisation
+                debouncePreview();
+            });
+        });
+
+        // Formes des yeux
+        eyeShapes.forEach(shape => {
+            shape.addEventListener('click', () => {
+                // Désélectionner toutes les formes
+                eyeShapes.forEach(s => s.classList.remove('selected'));
+                
+                // Sélectionner la forme cliquée
+                shape.classList.add('selected');
+                
+                // Générer la prévisualisation
+                debouncePreview();
+            });
+        });
+    }
+
+    // ------- Gestion de l'upload de logo -------
+
+    /**
+     * Initialise l'upload de logo
+     */
+    function initLogoUpload() {
+        if (logoUpload) {
+            logoUpload.addEventListener('change', handleLogoUpload);
+            
+            // Bouton de suppression du logo
+            const removeLogoBtn = document.getElementById('remove-logo');
+            if (removeLogoBtn) {
+                removeLogoBtn.addEventListener('click', () => {
+                    // Réinitialiser l'input file
+                    logoUpload.value = '';
+                    
+                    // Masquer l'aperçu du logo
+                    const logoPreview = document.getElementById('logo-preview');
+                    if (logoPreview) {
+                        logoPreview.style.display = 'none';
+                        logoPreview.src = '';
+                    }
+                    
+                    // Générer la prévisualisation sans logo
+                    debouncePreview();
+                });
+            }
+        }
+    }
+
+    /**
+     * Gère l'upload d'un logo
+     * @param {Event} event - Événement de changement de l'input file
+     */
+    function handleLogoUpload(event) {
+        const file = event.target.files[0];
+        if (file) {
+            // Vérifier le type de fichier
+            if (!file.type.match('image.*')) {
+                showError('Le fichier sélectionné n\'est pas une image');
+                return;
+            }
+            
+            // Vérifier la taille du fichier (max 2 Mo)
+            if (file.size > 2 * 1024 * 1024) {
+                showError('L\'image est trop volumineuse (max 2 Mo)');
+                return;
+            }
+            
+            // Afficher l'aperçu du logo
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const logoPreview = document.getElementById('logo-preview');
+                if (logoPreview) {
+                    logoPreview.style.display = 'block';
+                    logoPreview.src = e.target.result;
+                }
+                
+                // Générer la prévisualisation avec le logo
+                debouncePreview();
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    // ------- Gestion des boutons d'exportation -------
+
+    /**
+     * Initialise les boutons d'exportation
+     */
+    function initExportButtons() {
+        exportButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const format = button.getAttribute('data-format');
+                exportQRCode(format);
+            });
+        });
+    }
+
+    // ------- Gestion des formulaires -------
+
+    /**
+     * Gère la soumission du formulaire (génération du QR code)
+     * @param {Event} event - Événement de soumission du formulaire
+     */
+    function handleFormSubmit(event) {
+        event.preventDefault();
+        generateQRCode();
+    }
+
+    // ------- Génération de QR code -------
+
+    /**
+     * Génère un QR code avec les options sélectionnées
+     */
+    function generateQRCode() {
+        // Vérifier que des données sont présentes
+        if (!qrDataInput || !qrDataInput.value.trim()) {
+            showError('Veuillez saisir du contenu pour le QR code');
+            return;
+        }
+        
+        // Afficher un indicateur de chargement
+        showLoading(true);
+        
+        // Récupérer les options en fonction de l'onglet actif
+        const formData = new FormData();
+        formData.append('data', qrDataInput.value.trim());
+        
+        // Options communes
+        const version = document.getElementById('qr-version')?.value || 1;
+        const errorCorrection = document.getElementById('qr-error-correction')?.value || 1;
+        const boxSize = document.getElementById('qr-box-size')?.value || 10;
+        const border = document.getElementById('qr-border')?.value || 4;
+        
+        formData.append('version', version);
+        formData.append('error_correction', errorCorrection);
+        formData.append('box_size', boxSize);
+        formData.append('border', border);
+        
+        // Type de génération en fonction de l'onglet actif
+        formData.append('generation_type', currentTab);
+        
+        // Options spécifiques à l'onglet "custom"
+        if (currentTab === 'custom') {
+            const fillColor = document.getElementById('fill-color')?.value || '#000000';
+            const backColor = document.getElementById('back-color')?.value || '#FFFFFF';
+            
+            formData.append('fill_color', fillColor);
+            formData.append('back_color', backColor);
+        }
+        
+        // Options spécifiques à l'onglet "logo"
+        else if (currentTab === 'logo') {
+            // Logo
+            const logoFile = logoUpload?.files[0];
+            if (logoFile) {
+                formData.append('logo', logoFile);
+            }
+            
+            // Taille du logo
+            const logoSize = document.getElementById('logo-size')?.value || 0.2;
+            formData.append('logo_size', logoSize);
+            
+            // Couleurs
+            const fillColor = document.getElementById('logo-fill-color')?.value || '#000000';
+            const backColor = document.getElementById('logo-back-color')?.value || '#FFFFFF';
+            
+            formData.append('fill_color', fillColor);
+            formData.append('back_color', backColor);
+        }
+        
+        // Options spécifiques à l'onglet "styled"
+        else if (currentTab === 'styled') {
+            const moduleDrawer = document.querySelector('.module-shape.selected')?.getAttribute('data-value') || 'square';
+            const colorMask = document.getElementById('color-mask')?.value || 'solid';
+            
+            formData.append('module_drawer', moduleDrawer);
+            formData.append('color_mask', colorMask);
+            
+            // Couleurs pour le masque
+            if (colorMask === 'solid') {
+                const frontColor = document.getElementById('front-color')?.value || '#000000';
+                const backColor = document.getElementById('back-color')?.value || '#FFFFFF';
+                
+                formData.append('front_color', frontColor);
+                formData.append('back_color', backColor);
+            } else {
+                // Options pour les gradients
+                const frontColor = document.getElementById('gradient-start-color')?.value || '#000000';
+                const edgeColor = document.getElementById('gradient-end-color')?.value || '#666666';
+                const backColor = document.getElementById('gradient-back-color')?.value || '#FFFFFF';
+                
+                formData.append('front_color', frontColor);
+                formData.append('edge_color', edgeColor);
+                formData.append('back_color', backColor);
+                
+                // Centre du gradient
+                if (document.getElementById('gradient-center-x') && document.getElementById('gradient-center-y')) {
+                    const gradientCenterX = document.getElementById('gradient-center-x').value;
+                    const gradientCenterY = document.getElementById('gradient-center-y').value;
+                    
+                    formData.append('gradient_center_x', gradientCenterX);
+                    formData.append('gradient_center_y', gradientCenterY);
+                }
+            }
+        }
+        
+        // Options spécifiques à l'onglet "predefined"
+        else if (currentTab === 'predefined') {
+            const styleName = document.querySelector('.style-option.selected')?.getAttribute('data-value') || 'classic';
+            formData.append('style_name', styleName);
+        }
+        
+        // Options spécifiques à l'onglet "social"
+        else if (currentTab === 'social') {
+            const socialPlatform = document.querySelector('.social-platform.selected')?.getAttribute('data-value') || '';
+            
+            if (socialPlatform) {
+                formData.append('social_platform', socialPlatform);
+            } else {
+                showError('Veuillez sélectionner une plateforme sociale');
+                showLoading(false);
+                return;
+            }
+            
+            // Couleurs
+            const fillColor = document.getElementById('social-fill-color')?.value || '#000000';
+            const backColor = document.getElementById('social-back-color')?.value || '#FFFFFF';
+            
+            formData.append('fill_color', fillColor);
+            formData.append('back_color', backColor);
+        }
+        
+        // Options spécifiques à l'onglet "multi_social"
+        else if (currentTab === 'multi_social') {
+            const selectedPlatforms = document.querySelectorAll('.social-platform.selected');
+            
+            if (selectedPlatforms.length === 0) {
+                showError('Veuillez sélectionner au moins une plateforme sociale');
+                showLoading(false);
+                return;
+            }
+            
+            // Ajouter toutes les plateformes sélectionnées
+            selectedPlatforms.forEach(platform => {
+                formData.append('social_platforms', platform.getAttribute('data-value'));
+            });
+            
+            // Layout (disposition des icônes)
+            const layout = document.getElementById('social-layout')?.value || 'circle';
+            formData.append('layout', layout);
+            
+            // Couleurs
+            const fillColor = document.getElementById('multi-social-fill-color')?.value || '#000000';
+            const backColor = document.getElementById('multi-social-back-color')?.value || '#FFFFFF';
+            
+            formData.append('fill_color', fillColor);
+            formData.append('back_color', backColor);
+        }
+        
+        // Options spécifiques à l'onglet "custom_shape"
+        else if (currentTab === 'custom_shape') {
+            const moduleShape = document.querySelector('.module-shape.selected')?.getAttribute('data-value') || 'square';
+            const frameShape = document.querySelector('.frame-shape.selected')?.getAttribute('data-value') || 'square';
+            const eyeShape = document.querySelector('.eye-shape.selected')?.getAttribute('data-value') || 'square';
+            
+            formData.append('module_shape', moduleShape);
+            formData.append('frame_shape', frameShape);
+            formData.append('eye_shape', eyeShape);
+            
+            // Couleurs
+            const fillColor = document.getElementById('custom-shape-fill-color')?.value || '#000000';
+            const backColor = document.getElementById('custom-shape-back-color')?.value || '#FFFFFF';
+            
+            formData.append('fill_color', fillColor);
+            formData.append('back_color', backColor);
+        }
+        
+        // Envoi de la requête AJAX
+        fetch('/generate', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Erreur lors de la génération du QR code');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Mise à jour de l'aperçu
+                qrPreview.src = `/qrcodes/${data.qr_path}`;
+                
+                // Enregistrement du chemin du QR code généré
+                currentQRPath = data.qr_path;
+                
+                // Activer les boutons d'exportation
+                enableExportButtons();
+                
+                // Afficher un message de succès
+                showSuccess('QR code généré avec succès');
+            } else {
+                showError(data.error || 'Erreur lors de la génération du QR code');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showError('Erreur lors de la génération du QR code');
+        })
+        .finally(() => {
+            showLoading(false);
+        });
+    }
+
+    /**
+     * Génère une prévisualisation du QR code avec les options actuelles
+     */
+    function generatePreview() {
+        // Vérifier que des données sont présentes
+        if (!qrDataInput || !qrDataInput.value.trim()) {
+            return;
+        }
+        
+        // Récupérer les options en fonction de l'onglet actif
+        const formData = new FormData();
+        formData.append('data', qrDataInput.value.trim());
+        
+        // Type de prévisualisation en fonction de l'onglet actif
+        formData.append('preview_type', currentTab);
+        
+        // Options communes
+        const version = document.getElementById('qr-version')?.value || 1;
+        const errorCorrection = document.getElementById('qr-error-correction')?.value || 1;
+        const boxSize = document.getElementById('qr-box-size')?.value || 10;
+        const border = document.getElementById('qr-border')?.value || 4;
+        
+        formData.append('version', version);
+        formData.append('error_correction', errorCorrection);
+        formData.append('box_size', boxSize);
+        formData.append('border', border);
+        
+        // Options spécifiques à l'onglet "custom"
+        if (currentTab === 'custom') {
+            const fillColor = document.getElementById('fill-color')?.value || '#000000';
+            const backColor = document.getElementById('back-color')?.value || '#FFFFFF';
+            
+            formData.append('fill_color', fillColor);
+            formData.append('back_color', backColor);
+        }
+        
+        // Options spécifiques à l'onglet "logo"
+        else if (currentTab === 'logo') {
+            // Logo (si présent dans l'aperçu)
+            const logoPreview = document.getElementById('logo-preview');
+            if (logoPreview && logoPreview.style.display !== 'none' && logoPreview.src) {
+                formData.append('logo_data', logoPreview.src);
+            }
+            
+            // Taille du logo
+            const logoSize = document.getElementById('logo-size')?.value || 0.2;
+            formData.append('logo_size', logoSize);
+            
+            // Couleurs
+            const fillColor = document.getElementById('logo-fill-color')?.value || '#000000';
+            const backColor = document.getElementById('logo-back-color')?.value || '#FFFFFF';
+            
+            formData.append('fill_color', fillColor);
+            formData.append('back_color', backColor);
+        }
+        
+        // Options spécifiques à l'onglet "styled"
+        else if (currentTab === 'styled') {
+            const moduleDrawer = document.querySelector('.module-shape.selected')?.getAttribute('data-value') || 'square';
+            const colorMask = document.getElementById('color-mask')?.value || 'solid';
+            
+            formData.append('module_drawer', moduleDrawer);
+            formData.append('color_mask', colorMask);
+            
+            // Couleurs pour le masque
+            if (colorMask === 'solid') {
+                const frontColor = document.getElementById('front-color')?.value || '#000000';
+                const backColor = document.getElementById('back-color')?.value || '#FFFFFF';
+                
+                formData.append('front_color', frontColor);
+                formData.append('back_color', backColor);
+            } else {
+                // Options pour les gradients
+                const frontColor = document.getElementById('gradient-start-color')?.value || '#000000';
+                const edgeColor = document.getElementById('gradient-end-color')?.value || '#666666';
+                const backColor = document.getElementById('gradient-back-color')?.value || '#FFFFFF';
+                
+                formData.append('front_color', frontColor);
+                formData.append('edge_color', edgeColor);
+                formData.append('back_color', backColor);
+                
+                // Centre du gradient
+                if (document.getElementById('gradient-center-x') && document.getElementById('gradient-center-y')) {
+                    const gradientCenterX = document.getElementById('gradient-center-x').value;
+                    const gradientCenterY = document.getElementById('gradient-center-y').value;
+                    
+                    formData.append('gradient_center_x', gradientCenterX);
+                    formData.append('gradient_center_y', gradientCenterY);
+                }
+            }
+        }
+        
+        // Options spécifiques à l'onglet "predefined"
+        else if (currentTab === 'predefined') {
+            const styleName = document.querySelector('.style-option.selected')?.getAttribute('data-value') || 'classic';
+            formData.append('style_name', styleName);
+        }
+        
+        // Options spécifiques à l'onglet "social"
+        else if (currentTab === 'social') {
+            const socialPlatform = document.querySelector('.social-platform.selected')?.getAttribute('data-value');
+            
+            if (socialPlatform) {
+                formData.append('social_platform', socialPlatform);
+                
+                // Couleurs
+                const fillColor = document.getElementById('social-fill-color')?.value || '#000000';
+                const backColor = document.getElementById('social-back-color')?.value || '#FFFFFF';
+                
+                formData.append('fill_color', fillColor);
+                formData.append('back_color', backColor);
+            }
+        }
+        
+        // Options spécifiques à l'onglet "custom_shape"
+        else if (currentTab === 'custom_shape') {
+            const moduleShape = document.querySelector('.module-shape.selected')?.getAttribute('data-value') || 'square';
+            const frameShape = document.querySelector('.frame-shape.selected')?.getAttribute('data-value') || 'square';
+            const eyeShape = document.querySelector('.eye-shape.selected')?.getAttribute('data-value') || 'square';
+            
+            formData.append('module_shape', moduleShape);
+            formData.append('frame_shape', frameShape);
+            formData.append('eye_shape', eyeShape);
+            
+            // Couleurs
+            const fillColor = document.getElementById('custom-shape-fill-color')?.value || '#000000';
+            const backColor = document.getElementById('custom-shape-back-color')?.value || '#FFFFFF';
+            
+            formData.append('fill_color', fillColor);
+            formData.append('back_color', backColor);
         }
         
         // Envoi de la requête AJAX
@@ -511,566 +659,255 @@ function handleLogoPreview(form) {
         })
         .then(response => {
             if (!response.ok) {
-                throw new Error(`Erreur HTTP: ${response.status}`);
+                throw new Error('Erreur lors de la génération de la prévisualisation');
             }
             return response.json();
         })
         .then(data => {
-            if (data.success && previewContainer) {
-                // Affichage de la prévisualisation
-                previewContainer.innerHTML = `
-                    <img src="${data.preview}" class="qr-preview-image fade-in" alt="QR Code Preview">
-                `;
-            } else {
-                console.error('Erreur de prévisualisation:', data.error);
+            if (data.success) {
+                // Mise à jour de l'aperçu
+                qrPreview.src = data.preview;
             }
         })
         .catch(error => {
-            console.error('Erreur lors de la prévisualisation avec logo:', error);
-        });
-    };
-    
-    reader.readAsDataURL(logoFile.files[0]);
-}
-
-// Initialisation des gestionnaires de formulaires QR
-function initQRFormHandlers() {
-    const qrForms = document.querySelectorAll('.qr-form');
-    
-    qrForms.forEach(form => {
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            // Affichage d'un indicateur de chargement
-            const previewContainer = document.getElementById('qrPreview');
-            if (previewContainer) {
-                previewContainer.innerHTML = `
-                    <div class="loading-container">
-                        <div class="loading-spinner"></div>
-                        <p class="loading-text">Génération du QR code en cours...</p>
-                    </div>
-                `;
-            }
-            
-            // Détermination du type de génération basé sur l'ID du formulaire
-            let generationType;
-            switch (form.id) {
-                case 'basicForm':
-                    generationType = 'basic';
-                    break;
-                case 'customForm':
-                    generationType = 'custom';
-                    break;
-                case 'logoForm':
-                    generationType = 'logo';
-                    break;
-                case 'styleForm':
-                    generationType = 'styled';
-                    break;
-                case 'socialForm':
-                    generationType = 'social';
-                    break;
-                case 'multiSocialForm':
-                    generationType = 'multi_social';
-                    break;
-                default:
-                    generationType = 'basic';
-            }
-            
-            // Préparation des données du formulaire
-            const formData = new FormData(form);
-            formData.append('generation_type', generationType);
-            
-            // Envoi de la requête AJAX
-            fetch('/generate', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(data => {
-                        throw new Error(data.error || `Erreur HTTP: ${response.status}`);
-                    });
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    // Affichage du QR code généré
-                    if (previewContainer) {
-                        previewContainer.innerHTML = `
-                            <img src="${data.download_url}" class="qr-preview-image fade-in" alt="QR Code">
-                        `;
-                    }
-                    
-                    // Affichage des options d'exportation
-                    const exportCard = document.getElementById('exportCard');
-                    if (exportCard) {
-                        exportCard.style.display = 'block';
-                    }
-                    
-                    // Mise à jour du champ caché pour l'exportation
-                    const qrPathInput = document.getElementById('qrPathInput');
-                    if (qrPathInput) {
-                        qrPathInput.value = data.qr_path;
-                    }
-                    
-                    // Notification de succès
-                    showNotification('QR code généré avec succès !', 'success');
-                } else {
-                    // Notification d'erreur
-                    showNotification(data.error || 'Une erreur est survenue lors de la génération du QR code.', 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Erreur:', error);
-                showNotification(error.message || 'Une erreur est survenue lors de la génération du QR code.', 'error');
-            });
-        });
-    });
-}
-
-// Initialisation des gestionnaires d'exportation
-function initExportHandlers() {
-    // Formulaire d'exportation principal
-    const exportForm = document.getElementById('exportForm');
-    if (exportForm) {
-        exportForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            handleExport(this);
+            console.error('Erreur de prévisualisation:', error);
+            // Ne pas afficher d'erreur pour ne pas perturber l'expérience utilisateur
         });
     }
-    
-    // Formulaire d'exportation dans le modal
-    const modalExportForm = document.getElementById('modalExportForm');
-    if (modalExportForm) {
-        const modalExportButton = document.getElementById('modalExportButton');
-        if (modalExportButton) {
-            modalExportButton.addEventListener('click', function() {
-                handleExport(modalExportForm);
-            });
-        }
-    }
-}
 
-// Fonction de gestion de l'exportation
-function handleExport(form) {
-    // Récupération du statut d'exportation
-    const statusElement = form.id === 'exportForm' ? 
-                          document.getElementById('exportStatus') : 
-                          document.getElementById('modalExportStatus');
-    
-    // Affichage de l'indicateur de chargement
-    if (statusElement) {
-        statusElement.innerHTML = `
-            <div class="d-flex align-items-center">
-                <div class="loading-spinner"></div>
-                <span class="ms-2">Exportation en cours...</span>
-            </div>
-        `;
-    }
-    
-    // Préparation des données du formulaire
-    const formData = new FormData(form);
-    
-    // Envoi de la requête AJAX
-    fetch('/export', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(data => {
-                throw new Error(data.error || `Erreur HTTP: ${response.status}`);
-            });
-        }
-        return response.json();
-    })
-    .then(data => {
-        // Effacement de l'indicateur de chargement
-        if (statusElement) {
-            statusElement.innerHTML = '';
+    // ------- Exportation de QR code -------
+
+    /**
+     * Exporte le QR code dans le format spécifié
+     * @param {string} format - Format d'exportation (png, svg, pdf, eps, etc.)
+     */
+    function exportQRCode(format) {
+        // Vérifier qu'un QR code a été généré
+        if (!currentQRPath) {
+            showError('Veuillez d\'abord générer un QR code');
+            return;
         }
         
-        if (data.success) {
-            // Fermeture du modal si c'est une exportation depuis le modal
-            if (form.id === 'modalExportForm') {
-                const modal = document.getElementById('exportModal');
-                if (modal && typeof bootstrap !== 'undefined') {
-                    const bsModal = bootstrap.Modal.getInstance(modal);
-                    if (bsModal) {
-                        bsModal.hide();
-                    }
-                }
+        // Afficher un indicateur de chargement
+        showLoading(true);
+        
+        // Récupérer les options d'exportation
+        const formData = new FormData();
+        formData.append('qr_path', currentQRPath);
+        formData.append('export_format', format);
+        
+        // Options spécifiques au format
+        if (format === 'png') {
+            // Options pour PNG
+            const dpi = document.getElementById('png-dpi')?.value || 300;
+            const quality = document.getElementById('png-quality')?.value || 95;
+            
+            formData.append('dpi', dpi);
+            formData.append('quality', quality);
+            
+            // Dimensions
+            if (document.getElementById('png-width') && document.getElementById('png-height')) {
+                const width = document.getElementById('png-width').value;
+                const height = document.getElementById('png-height').value;
+                
+                formData.append('size_width', width);
+                formData.append('size_height', height);
+            }
+        }
+        else if (format === 'svg') {
+            // Options pour SVG
+            const scale = document.getElementById('svg-scale')?.value || 1;
+            formData.append('scale', scale);
+            
+            // Dimensions
+            if (document.getElementById('svg-width') && document.getElementById('svg-height')) {
+                const width = document.getElementById('svg-width').value;
+                const height = document.getElementById('svg-height').value;
+                
+                formData.append('size_width', width);
+                formData.append('size_height', height);
+            }
+        }
+        else if (format === 'pdf') {
+            // Options pour PDF
+            const title = document.getElementById('pdf-title')?.value || 'QR Code';
+            const author = document.getElementById('pdf-author')?.value || 'QR Code Generator';
+            
+            formData.append('title', title);
+            formData.append('author', author);
+            
+            // Dimensions
+            if (document.getElementById('pdf-width') && document.getElementById('pdf-height')) {
+                const width = document.getElementById('pdf-width').value;
+                const height = document.getElementById('pdf-height').value;
+                
+                formData.append('size_width', width);
+                formData.append('size_height', height);
             }
             
-            // Téléchargement du fichier exporté
-            if (data.download_url) {
-                window.location.href = data.download_url;
-                showNotification('QR code exporté avec succès !', 'success');
-            } else if (data.download_urls) {
-                // Si plusieurs formats ont été exportés
-                for (const format in data.download_urls) {
-                    window.open(data.download_urls[format], '_blank');
-                }
-                showNotification('QR code exporté dans tous les formats avec succès !', 'success');
+            // Position
+            if (document.getElementById('pdf-x') && document.getElementById('pdf-y')) {
+                const x = document.getElementById('pdf-x').value;
+                const y = document.getElementById('pdf-y').value;
+                
+                formData.append('position_x', x);
+                formData.append('position_y', y);
             }
-        } else {
-            showNotification(data.error || 'Une erreur est survenue lors de l\'exportation du QR code.', 'error');
         }
-    })
-    .catch(error => {
-        // Effacement de l'indicateur de chargement
-        if (statusElement) {
-            statusElement.innerHTML = '';
+        else if (format === 'eps') {
+            // Options pour EPS
+            const dpi = document.getElementById('eps-dpi')?.value || 300;
+            formData.append('dpi', dpi);
         }
         
-        console.error('Erreur:', error);
-        showNotification(error.message || 'Une erreur est survenue lors de l\'exportation du QR code.', 'error');
-    });
-}
-
-// Initialisation des gestionnaires d'upload
-function initUploadHandlers() {
-    // Gestion du changement de fichier logo
-    const logoFileInput = document.getElementById('logoFile');
-    if (logoFileInput) {
-        logoFileInput.addEventListener('change', function(e) {
-            const fileNameDisplay = document.getElementById('selectedFileName');
-            const file = this.files[0];
-            
-            if (file) {
-                // Affichage du nom du fichier
-                if (fileNameDisplay) {
-                    fileNameDisplay.textContent = file.name;
-                    fileNameDisplay.classList.remove('text-muted');
-                    fileNameDisplay.classList.add('text-success');
-                }
-                
-                // Prévisualisation du logo
-                const logoPreview = document.getElementById('logoPreview');
-                if (logoPreview) {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        logoPreview.innerHTML = `
-                            <img src="${e.target.result}" class="img-fluid" style="max-height: 100px;" alt="Logo Preview">
-                        `;
-                    };
-                    reader.readAsDataURL(file);
-                }
-                
-                // Mise à jour de la prévisualisation du QR code
-                handleLogoPreview(this.closest('form'));
-            } else {
-                // Réinitialisation si aucun fichier n'est sélectionné
-                if (fileNameDisplay) {
-                    fileNameDisplay.textContent = 'Aucun fichier sélectionné';
-                    fileNameDisplay.classList.remove('text-success');
-                    fileNameDisplay.classList.add('text-muted');
-                }
-                
-                if (logoPreview) {
-                    logoPreview.innerHTML = '';
-                }
-            }
-        });
-    }
-}
-
-// Initialisation des notifications
-function initNotifications() {
-    // Création du conteneur de notifications s'il n'existe pas
-    if (!document.getElementById('notificationsContainer')) {
-        const container = document.createElement('div');
-        container.id = 'notificationsContainer';
-        container.style.position = 'fixed';
-        container.style.bottom = '20px';
-        container.style.right = '20px';
-        container.style.zIndex = '9999';
-        document.body.appendChild(container);
-    }
-}
-
-// Affichage d'une notification
-function showNotification(message, type = 'info', duration = 5000) {
-    const container = document.getElementById('notificationsContainer');
-    if (!container) return;
-    
-    // Création de l'ID unique pour la notification
-    const id = `notification-${Date.now()}`;
-    
-    // Détermination des classes et icônes selon le type
-    let typeClass, icon;
-    switch (type) {
-        case 'success':
-            typeClass = 'notification-success';
-            icon = 'fas fa-check-circle';
-            break;
-        case 'error':
-            typeClass = 'notification-error';
-            icon = 'fas fa-exclamation-circle';
-            break;
-        case 'warning':
-            typeClass = 'notification-warning';
-            icon = 'fas fa-exclamation-triangle';
-            break;
-        default:
-            typeClass = 'notification-info';
-            icon = 'fas fa-info-circle';
-    }
-    
-    // Création de la notification
-    const notification = document.createElement('div');
-    notification.id = id;
-    notification.className = `notification ${typeClass}`;
-    notification.innerHTML = `
-        <div class="notification-icon">
-            <i class="${icon}"></i>
-        </div>
-        <div class="notification-content">
-            <div class="notification-title">${type.charAt(0).toUpperCase() + type.slice(1)}</div>
-            <div class="notification-message">${message}</div>
-        </div>
-        <button class="notification-close" aria-label="Fermer">
-            <i class="fas fa-times"></i>
-        </button>
-    `;
-    
-    // Ajout de la notification au conteneur
-    container.appendChild(notification);
-    
-    // Animation d'apparition
-    setTimeout(() => {
-        notification.classList.add('show');
-    }, 10);
-    
-    // Configuration du bouton de fermeture
-    const closeButton = notification.querySelector('.notification-close');
-    if (closeButton) {
-        closeButton.addEventListener('click', () => {
-            closeNotification(notification);
-        });
-    }
-    
-    // Fermeture automatique après la durée spécifiée
-    setTimeout(() => {
-        closeNotification(notification);
-    }, duration);
-}
-
-// Fermeture d'une notification
-function closeNotification(notification) {
-    // Animation de disparition
-    notification.classList.remove('show');
-    
-    // Suppression après l'animation
-    setTimeout(() => {
-        if (notification.parentNode) {
-            notification.parentNode.removeChild(notification);
-        }
-    }, 300);
-}
-
-// Vérification de l'état du serveur
-function checkServerStatus() {
-    fetch('/api/status')
+        // Envoi de la requête AJAX
+        fetch('/export', {
+            method: 'POST',
+            body: formData
+        })
         .then(response => {
             if (!response.ok) {
-                throw new Error(`Erreur HTTP: ${response.status}`);
+                throw new Error('Erreur lors de l\'exportation du QR code');
             }
             return response.json();
         })
         .then(data => {
-            console.log('Statut du serveur:', data);
-            
-            // Vérification des problèmes potentiels
-            const directories = data.directories || {};
-            let hasIssues = false;
-            
-            for (const [key, info] of Object.entries(directories)) {
-                if (!info.exists) {
-                    console.warn(`Avertissement: Le répertoire ${key} n'existe pas.`);
-                    hasIssues = true;
-                }
-            }
-            
-            if (hasIssues) {
-                showNotification('Des problèmes ont été détectés avec la configuration du serveur. Certaines fonctionnalités pourraient ne pas fonctionner correctement.', 'warning');
+            if (data.success) {
+                // Téléchargement du fichier exporté
+                window.location.href = data.download_url;
+                
+                // Afficher un message de succès
+                showSuccess(`QR code exporté avec succès en format ${format.toUpperCase()}`);
+            } else {
+                showError(data.error || 'Erreur lors de l\'exportation du QR code');
             }
         })
         .catch(error => {
-            console.error('Erreur lors de la vérification du statut du serveur:', error);
-            showNotification('Impossible de vérifier l\'état du serveur. Certaines fonctionnalités pourraient ne pas fonctionner correctement.', 'error');
+            console.error('Erreur:', error);
+            showError('Erreur lors de l\'exportation du QR code');
+        })
+        .finally(() => {
+            showLoading(false);
         });
-}
-
-// Améliorations de l'interface utilisateur
-function initUIEnhancements() {
-    // Ajout de la classe active aux onglets
-    const currentTab = document.querySelector('.qr-tab.active');
-    if (!currentTab && document.querySelector('.qr-tab')) {
-        document.querySelector('.qr-tab').classList.add('active');
     }
-    
-    // Gestion des modals
-    initModals();
-    
-    // Réutilisation des données QR depuis l'historique
-    initQRReuse();
-    
-    // Amélioration des formulaires (validation, auto-focus, etc.)
-    enhanceForms();
-}
 
-// Initialisation des modals
-function initModals() {
-    // Pour Bootstrap, mais peut être adapté pour d'autres frameworks
-    document.querySelectorAll('[data-bs-toggle="modal"]').forEach(button => {
-        button.addEventListener('click', function() {
-            const targetId = this.getAttribute('data-bs-target') || this.getAttribute('href');
-            if (targetId) {
-                const modal = document.querySelector(targetId);
-                if (modal && typeof bootstrap !== 'undefined') {
-                    const bsModal = new bootstrap.Modal(modal);
-                    bsModal.show();
-                } else {
-                    // Fallback si Bootstrap n'est pas disponible
-                    const modal = document.querySelector(targetId);
-                    if (modal) {
-                        modal.classList.add('show');
-                        modal.style.display = 'block';
-                    }
-                }
-            }
-        });
-    });
-    
-    // Boutons de fermeture des modals
-    document.querySelectorAll('[data-bs-dismiss="modal"]').forEach(button => {
-        button.addEventListener('click', function() {
-            const modal = this.closest('.modal');
-            if (modal && typeof bootstrap !== 'undefined') {
-                const bsModal = bootstrap.Modal.getInstance(modal);
-                if (bsModal) {
-                    bsModal.hide();
-                }
+    // ------- Utilitaires -------
+
+    /**
+     * Active ou désactive les boutons d'exportation
+     * @param {boolean} enable - Activer (true) ou désactiver (false) les boutons
+     */
+    function enableExportButtons(enable = true) {
+        exportButtons.forEach(button => {
+            button.disabled = !enable;
+            if (enable) {
+                button.classList.remove('disabled');
             } else {
-                // Fallback si Bootstrap n'est pas disponible
-                const modal = this.closest('.modal');
-                if (modal) {
-                    modal.classList.remove('show');
-                    modal.style.display = 'none';
-                }
+                button.classList.add('disabled');
             }
-        });
-    });
-    
-    // Mise à jour du champ caché dans le modal d'exportation
-    document.querySelectorAll('.export-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            const qrPath = this.getAttribute('data-qr-path');
-            const modalQrPathInput = document.getElementById('modalQrPathInput');
-            
-            if (modalQrPathInput && qrPath) {
-                modalQrPathInput.value = qrPath;
-            }
-        });
-    });
-}
-
-// Initialisation de la réutilisation des QR codes
-function initQRReuse() {
-    document.querySelectorAll('.reuse-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            const qrData = this.getAttribute('data-qr-data');
-            
-            if (qrData) {
-                // Stockage des données pour la réutilisation
-                localStorage.setItem('reuseQrData', qrData);
-                
-                // Redirection vers la page d'accueil
-                window.location.href = '/';
-            }
-        });
-    });
-    
-    // Vérification au chargement de la page d'accueil
-    if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
-        const reuseData = localStorage.getItem('reuseQrData');
-        
-        if (reuseData) {
-            // Remplissage des champs de données dans tous les onglets
-            document.querySelectorAll('textarea[name="data"], input[name="data"]').forEach(input => {
-                input.value = reuseData;
-            });
-            
-            // Suppression des données du localStorage
-            localStorage.removeItem('reuseQrData');
-            
-            // Lancement de la prévisualisation
-            const activeTab = document.querySelector('.tab-content.active');
-            if (activeTab) {
-                const form = activeTab.querySelector('form');
-                if (form) {
-                    updateLivePreview(form);
-                }
-            } else if (document.querySelector('form')) {
-                updateLivePreview(document.querySelector('form'));
-            }
-            
-            // Notification
-            showNotification('Données du QR code chargées avec succès.', 'info');
-        }
-    }
-}
-
-// Amélioration des formulaires
-function enhanceForms() {
-    // Auto-focus sur le premier champ des formulaires
-    document.querySelectorAll('form').forEach(form => {
-        const firstInput = form.querySelector('input:not([type="hidden"]), textarea, select');
-        if (firstInput && !firstInput.value) {
-            firstInput.focus();
-        }
-    });
-    
-    // Validation des formulaires
-    document.querySelectorAll('form').forEach(form => {
-        form.addEventListener('submit', function(e) {
-            if (!this.checkValidity()) {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                // Marquer tous les champs invalides
-                this.querySelectorAll(':invalid').forEach(field => {
-                    field.classList.add('is-invalid');
-                    
-                    // Ajouter un gestionnaire d'événements pour retirer la classe lorsque l'utilisateur modifie le champ
-                    field.addEventListener('input', function() {
-                        this.classList.remove('is-invalid');
-                    }, { once: true });
-                });
-                
-                // Notification d'erreur
-                showNotification('Veuillez corriger les erreurs dans le formulaire avant de continuer.', 'warning');
-            }
-            
-            this.classList.add('was-validated');
-        });
-    });
-    
-    // Synchronisation des champs de données entre les onglets
-    const dataFields = document.querySelectorAll('textarea[name="data"], input[name="data"]');
-    if (dataFields.length > 1) {
-        dataFields.forEach(field => {
-            field.addEventListener('input', function() {
-                const value = this.value;
-                dataFields.forEach(f => {
-                    if (f !== this) {
-                        f.value = value;
-                    }
-                });
-            });
         });
     }
-}
+
+    /**
+     * Affiche ou masque l'indicateur de chargement
+     * @param {boolean} show - Afficher (true) ou masquer (false) l'indicateur
+     */
+    function showLoading(show) {
+        const loadingIndicator = document.getElementById('loading-indicator');
+        if (loadingIndicator) {
+            loadingIndicator.style.display = show ? 'flex' : 'none';
+        }
+    }
+
+    /**
+     * Affiche un message d'erreur
+     * @param {string} message - Message d'erreur à afficher
+     */
+    function showError(message) {
+        const errorContainer = document.getElementById('error-container');
+        if (errorContainer) {
+            errorContainer.textContent = message;
+            errorContainer.style.display = 'block';
+            
+            // Masquer après 5 secondes
+            setTimeout(() => {
+                errorContainer.style.display = 'none';
+            }, 5000);
+        }
+    }
+
+    /**
+     * Affiche un message de succès
+     * @param {string} message - Message de succès à afficher
+     */
+    function showSuccess(message) {
+        const successContainer = document.getElementById('success-container');
+        if (successContainer) {
+            successContainer.textContent = message;
+            successContainer.style.display = 'block';
+            
+            // Masquer après 3 secondes
+            setTimeout(() => {
+                successContainer.style.display = 'none';
+            }, 3000);
+        }
+    }
+
+    /**
+     * Fonction debounce pour éviter trop de requêtes lors des modifications rapides
+     */
+    function debouncePreview() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(generatePreview, DEBOUNCE_DELAY);
+    }
+
+    // --------- Fonctions pour l'affichage dynamique des options ---------
+
+    /**
+     * Met à jour les options affichées en fonction du masque de couleur sélectionné
+     */
+    document.addEventListener('change', function(event) {
+        if (event.target.id === 'color-mask') {
+            const colorMask = event.target.value;
+            
+            // Masquer tous les conteneurs d'options
+            document.querySelectorAll('.color-mask-options').forEach(container => {
+                container.style.display = 'none';
+            });
+            
+            // Afficher le conteneur correspondant au masque sélectionné
+            const selectedContainer = document.getElementById(`${colorMask}-options`);
+            if (selectedContainer) {
+                selectedContainer.style.display = 'block';
+            }
+            
+            // Générer une prévisualisation avec le nouveau masque
+            debouncePreview();
+        }
+    });
+
+    /**
+     * Met à jour l'affichage en fonction de la disposition des icônes sélectionnée
+     */
+    document.addEventListener('change', function(event) {
+        if (event.target.id === 'social-layout') {
+            // Mettre à jour la classe CSS pour l'affichage des icônes
+            const layout = event.target.value;
+            
+            const socialIconsPreview = document.getElementById('social-icons-preview');
+            if (socialIconsPreview) {
+                // Supprimer toutes les classes de disposition
+                socialIconsPreview.classList.remove('layout-circle', 'layout-line', 'layout-grid');
+                
+                // Ajouter la classe de la disposition sélectionnée
+                socialIconsPreview.classList.add(`layout-${layout}`);
+            }
+            
+            // Générer une prévisualisation avec la nouvelle disposition
+            debouncePreview();
+        }
+    });
+
+    // --------- Initialisation de l'application ---------
+    init();
+});
