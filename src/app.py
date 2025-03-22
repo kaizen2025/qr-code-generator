@@ -24,12 +24,16 @@ try:
     # Try direct imports first (when running from src directory)
     from backend.qr_generator.basic_generator import QRCodeGenerator
     from backend.customization.style_customizer import QRCodeCustomizer
+    from backend.customization.preview_generator import QRCodePreviewGenerator
     from backend.export.exporter import QRCodeExporter
+    from backend.customization.social_icons import SocialQRGenerator
 except ImportError:
     # Fall back to fully qualified imports
     from src.backend.qr_generator.basic_generator import QRCodeGenerator
     from src.backend.customization.style_customizer import QRCodeCustomizer
+    from src.backend.customization.preview_generator import QRCodePreviewGenerator
     from src.backend.export.exporter import QRCodeExporter
+    from src.backend.customization.social_icons import SocialQRGenerator
 
 # Création de l'application Flask
 app = Flask(__name__, 
@@ -70,7 +74,9 @@ for folder in [app.config['UPLOAD_FOLDER'], app.config['GENERATED_FOLDER'], app.
 # Initialisation des classes backend
 qr_generator = QRCodeGenerator(output_dir=app.config['GENERATED_FOLDER'])
 qr_customizer = QRCodeCustomizer(output_dir=app.config['GENERATED_FOLDER'])
+qr_preview = QRCodePreviewGenerator()
 qr_exporter = QRCodeExporter(output_dir=app.config['EXPORTED_FOLDER'])
+qr_social = SocialQRGenerator(output_dir=app.config['GENERATED_FOLDER'])
 
 # Liste des styles prédéfinis pour l'interface
 PREDEFINED_STYLES = [
@@ -89,8 +95,64 @@ PREDEFINED_STYLES = [
 EXPORT_FORMATS = [
     {'id': 'png', 'name': 'PNG', 'description': 'Format image standard'},
     {'id': 'svg', 'name': 'SVG', 'description': 'Format vectoriel pour impression'},
-    {'id': 'pdf', 'name': 'PDF', 'description': 'Document portable'}
+    {'id': 'pdf', 'name': 'PDF', 'description': 'Document portable'},
+    {'id': 'eps', 'name': 'EPS', 'description': 'Format pour impression professionnelle'}
 ]
+
+# Liste des options de formes pour les modules
+MODULE_SHAPES = [
+    {'id': 'square', 'name': 'Carré', 'icon': 'square.png'},
+    {'id': 'rounded', 'name': 'Arrondi', 'icon': 'rounded.png'},
+    {'id': 'circle', 'name': 'Cercle', 'icon': 'circle.png'},
+    {'id': 'dot', 'name': 'Point', 'icon': 'dot.png'},
+    {'id': 'vertical_bars', 'name': 'Barres V.', 'icon': 'vertical_bars.png'},
+    {'id': 'horizontal_bars', 'name': 'Barres H.', 'icon': 'horizontal_bars.png'},
+    {'id': 'gapped_square', 'name': 'Carré espacé', 'icon': 'gapped_square.png'},
+    {'id': 'mini_square', 'name': 'Mini carré', 'icon': 'mini_square.png'}
+]
+
+# Liste des options pour les marqueurs
+FRAME_SHAPES = [
+    {'id': 'square', 'name': 'Carré', 'icon': 'square.png'},
+    {'id': 'rounded_square', 'name': 'Carré arrondi', 'icon': 'rounded_square.png'},
+    {'id': 'circle', 'name': 'Cercle', 'icon': 'circle.png'},
+    {'id': 'rounded', 'name': 'Arrondi', 'icon': 'rounded.png'},
+    {'id': 'dots', 'name': 'Points', 'icon': 'dots.png'},
+    {'id': 'diamond', 'name': 'Losange', 'icon': 'diamond.png'},
+    {'id': 'corner_cut', 'name': 'Coins coupés', 'icon': 'corner_cut.png'},
+    {'id': 'jagged', 'name': 'Dentelé', 'icon': 'jagged.png'},
+    {'id': 'pointed', 'name': 'Pointu', 'icon': 'pointed.png'},
+    {'id': 'pixel', 'name': 'Pixel', 'icon': 'pixel.png'}
+]
+
+# Liste des options pour les yeux des QR codes
+EYE_SHAPES = [
+    {'id': 'square', 'name': 'Carré', 'icon': 'square.png'},
+    {'id': 'circle', 'name': 'Cercle', 'icon': 'circle.png'},
+    {'id': 'rounded', 'name': 'Arrondi', 'icon': 'rounded.png'},
+    {'id': 'cushion', 'name': 'Coussin', 'icon': 'cushion.png'},
+    {'id': 'diamond', 'name': 'Losange', 'icon': 'diamond.png'},
+    {'id': 'star', 'name': 'Étoile', 'icon': 'star.png'},
+    {'id': 'dots', 'name': 'Points', 'icon': 'dots.png'},
+    {'id': 'rounded_rect', 'name': 'Rectangle arrondi', 'icon': 'rounded_rect.png'},
+    {'id': 'flower', 'name': 'Fleur', 'icon': 'flower.png'},
+    {'id': 'leaf', 'name': 'Feuille', 'icon': 'leaf.png'}
+]
+
+# Liste des réseaux sociaux disponibles
+SOCIAL_PLATFORMS = [
+    {'id': 'facebook', 'name': 'Facebook', 'icon': 'facebook.png', 'color': '#1877F2'},
+    {'id': 'twitter', 'name': 'Twitter', 'icon': 'twitter.png', 'color': '#1DA1F2'},
+    {'id': 'instagram', 'name': 'Instagram', 'icon': 'instagram.png', 'color': '#E4405F'},
+    {'id': 'linkedin', 'name': 'LinkedIn', 'icon': 'linkedin.png', 'color': '#0A66C2'},
+    {'id': 'youtube', 'name': 'YouTube', 'icon': 'youtube.png', 'color': '#FF0000'},
+    {'id': 'tiktok', 'name': 'TikTok', 'icon': 'tiktok.png', 'color': '#000000'},
+    {'id': 'snapchat', 'name': 'Snapchat', 'icon': 'snapchat.png', 'color': '#FFFC00'},
+    {'id': 'pinterest', 'name': 'Pinterest', 'icon': 'pinterest.png', 'color': '#E60023'},
+    {'id': 'whatsapp', 'name': 'WhatsApp', 'icon': 'whatsapp.png', 'color': '#25D366'},
+    {'id': 'website', 'name': 'Site Web', 'icon': 'website.png', 'color': '#333333'}
+]
+
 
 @app.route('/api/status')
 def api_status():
@@ -146,7 +208,91 @@ def index():
     """Page d'accueil du générateur de QR codes."""
     return render_template('index.html', 
                           predefined_styles=PREDEFINED_STYLES,
-                          export_formats=EXPORT_FORMATS)
+                          export_formats=EXPORT_FORMATS,
+                          module_shapes=MODULE_SHAPES,
+                          frame_shapes=FRAME_SHAPES,
+                          eye_shapes=EYE_SHAPES,
+                          social_platforms=SOCIAL_PLATFORMS)
+
+@app.route('/preview', methods=['POST'])
+def generate_preview():
+    """
+    Endpoint pour générer une prévisualisation de QR code en temps réel.
+    Accepte les données du formulaire et retourne une image base64.
+    """
+    try:
+        # Récupération des données du formulaire
+        data = request.form.get('data', '')
+        if not data:
+            return jsonify({'error': 'Aucune donnée fournie pour le QR code'}), 400
+        
+        preview_type = request.form.get('preview_type', 'basic')
+        
+        # Options communes
+        options = {
+            'version': int(request.form.get('version', 1)),
+            'error_correction': int(request.form.get('error_correction', 0)),
+            'box_size': int(request.form.get('box_size', 10)),
+            'border': int(request.form.get('border', 4))
+        }
+        
+        # Options spécifiques au type de prévisualisation
+        if preview_type == 'custom':
+            options['fill_color'] = request.form.get('fill_color', '#000000')
+            options['back_color'] = request.form.get('back_color', '#FFFFFF')
+        
+        elif preview_type == 'styled':
+            options['module_drawer'] = request.form.get('module_drawer', 'square')
+            options['color_mask'] = request.form.get('color_mask', 'solid')
+            options['front_color'] = request.form.get('front_color', '#000000')
+            options['back_color'] = request.form.get('back_color', '#FFFFFF')
+            
+            if 'edge_color' in request.form:
+                options['edge_color'] = request.form.get('edge_color')
+            
+            if 'gradient_center_x' in request.form and 'gradient_center_y' in request.form:
+                options['gradient_center'] = (
+                    float(request.form.get('gradient_center_x', 0.5)),
+                    float(request.form.get('gradient_center_y', 0.5))
+                )
+        
+        elif preview_type == 'predefined':
+            options['style_name'] = request.form.get('style_name', 'classic')
+        
+        elif preview_type == 'logo':
+            options['fill_color'] = request.form.get('fill_color', '#000000')
+            options['back_color'] = request.form.get('back_color', '#FFFFFF')
+            
+            if 'logo_data' in request.form:
+                options['logo_data'] = request.form.get('logo_data')
+            else:
+                return jsonify({'error': 'Données du logo manquantes'}), 400
+            
+            options['logo_size'] = float(request.form.get('logo_size', 0.2))
+        
+        elif preview_type == 'social':
+            options['fill_color'] = request.form.get('fill_color', '#000000')
+            options['back_color'] = request.form.get('back_color', '#FFFFFF')
+            options['social_platform'] = request.form.get('social_platform', 'facebook')
+        
+        elif preview_type == 'custom_shape':
+            options['fill_color'] = request.form.get('fill_color', '#000000')
+            options['back_color'] = request.form.get('back_color', '#FFFFFF')
+            options['module_shape'] = request.form.get('module_shape', 'square')
+            options['frame_shape'] = request.form.get('frame_shape', 'square')
+            options['eye_shape'] = request.form.get('eye_shape', 'square')
+            
+        # Génération de la prévisualisation
+        preview_base64 = qr_preview.generate_preview_base64(data, preview_type, **options)
+        
+        return jsonify({
+            'success': True,
+            'preview': preview_base64
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Erreur lors de la génération de la prévisualisation: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/generate', methods=['POST'])
 def generate_qrcode():
@@ -185,27 +331,26 @@ def generate_qrcode():
             options['back_color'] = request.form.get('back_color', '#FFFFFF')
             
             qr_path = qr_generator.generate_qrcode_with_options(data, filename, **options)
-            # Ajouter ce bloc dans la route /generate pour gérer les formes personnalisées:
-
-elif generation_type == 'custom_shape':
-    # Personnalisation avancée avec des formes spécifiques
-    module_shape = request.form.get('module_shape', 'square')
-    frame_shape = request.form.get('frame_shape', 'square')
-    eye_shape = request.form.get('eye_shape', 'square')
-    
-    # Options de couleur
-    options['fill_color'] = request.form.get('fill_color', '#000000')
-    options['back_color'] = request.form.get('back_color', '#FFFFFF')
-    
-    # Génération du QR code avec les formes personnalisées
-    qr_path = qr_customizer.generate_custom_shape_qrcode(
-        data, 
-        module_shape, 
-        frame_shape, 
-        eye_shape, 
-        filename,
-        **options
-    )
+            
+        elif generation_type == 'custom_shape':
+            # Personnalisation avancée avec des formes spécifiques
+            module_shape = request.form.get('module_shape', 'square')
+            frame_shape = request.form.get('frame_shape', 'square')
+            eye_shape = request.form.get('eye_shape', 'square')
+            
+            # Options de couleur
+            options['fill_color'] = request.form.get('fill_color', '#000000')
+            options['back_color'] = request.form.get('back_color', '#FFFFFF')
+            
+            # Génération du QR code avec les formes personnalisées
+            qr_path = qr_customizer.generate_custom_shape_qrcode(
+                data, 
+                module_shape, 
+                frame_shape, 
+                eye_shape, 
+                filename,
+                **options
+            )
             
         elif generation_type == 'logo':
             # Ajout d'un logo
@@ -223,6 +368,8 @@ elif generation_type == 'custom_shape':
             
             # Options pour le logo
             options['logo_size'] = float(request.form.get('logo_size', 0.2))
+            options['fill_color'] = request.form.get('fill_color', '#000000')
+            options['back_color'] = request.form.get('back_color', '#FFFFFF')
             
             qr_path = qr_generator.generate_qrcode_with_logo(data, logo_path, filename, **options)
             
@@ -253,6 +400,30 @@ elif generation_type == 'custom_shape':
             style_name = request.form.get('style_name', 'classic')
             
             qr_path = qr_customizer.apply_predefined_style(data, style_name, filename)
+            
+        elif generation_type == 'social':
+            # QR code avec icône de réseau social
+            social_platform = request.form.get('social_platform', 'facebook')
+            
+            # Options pour le QR code social
+            options['fill_color'] = request.form.get('fill_color', '#000000')
+            options['back_color'] = request.form.get('back_color', '#FFFFFF')
+            
+            qr_path = qr_social.generate_social_qrcode(data, social_platform, filename, **options)
+            
+        elif generation_type == 'multi_social':
+            # QR code avec plusieurs icônes de réseaux sociaux
+            social_platforms = request.form.getlist('social_platforms')
+            
+            if not social_platforms:
+                return jsonify({'error': 'Aucune plateforme sociale sélectionnée'}), 400
+            
+            # Options pour le QR code multi-social
+            options['fill_color'] = request.form.get('fill_color', '#000000')
+            options['back_color'] = request.form.get('back_color', '#FFFFFF')
+            options['layout'] = request.form.get('layout', 'circle')
+            
+            qr_path = qr_social.generate_multi_social_qrcode(data, social_platforms, filename, **options)
         
         else:
             return jsonify({'error': 'Type de génération non reconnu'}), 400
@@ -340,6 +511,12 @@ def export_qrcode():
             
             export_path = qr_exporter.export_to_pdf(full_qr_path, **options)
             
+        elif export_format == 'eps':
+            # Options pour EPS
+            options['dpi'] = int(request.form.get('dpi', 300))
+            
+            export_path = qr_exporter.export_to_eps(full_qr_path, **options)
+            
         elif export_format == 'all':
             # Exportation dans tous les formats
             export_paths = qr_exporter.export_to_all_formats(full_qr_path, **options)
@@ -419,7 +596,9 @@ def history():
     except Exception as e:
         app.logger.error(f"Error sorting QR codes: {e}")
     
-    return render_template('history.html', qr_codes=qr_codes, export_formats=EXPORT_FORMATS)
+    return render_template('history.html', 
+                           qr_codes=qr_codes, 
+                           export_formats=EXPORT_FORMATS)
 
 @app.route('/qrcodes/<filename>')
 def download_qrcode(filename):
