@@ -1,11 +1,21 @@
 {
   "name": "qr-code-generator",
   "version": "1.0.0",
-  "description": "Générateur de QR codes personnalisé",
+  "description": "Générateur de QR codes personnalisé pour Anecoop-France",
   "scripts": {
-    "start": "python src/render_init.py && gunicorn src.app:app"
+    "start": "python src/render_init.py && gunicorn src.app:app",
+    "dev": "FLASK_ENV=development python src/app.py",
+    "test": "pytest"
   },
   "engines": {
-    "node": "16.x"
-  }
+    "node": "18.x"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kaizen2025/qr-code-generator.git"
+  },
+  "author": "Kevin BIVIA",
+  "license": "Proprietary",
+  "dependencies": {},
+  "devDependencies": {}
 }
