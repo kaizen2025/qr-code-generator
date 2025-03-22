@@ -255,7 +255,64 @@
                                             {% endfor %}
                                         </div>
                                     </div>
-                                    
+                                    <!-- Section à ajouter dans l'onglet Style de index.html -->
+
+<div class="mb-4">
+    <h5 class="form-label">Forme du corps</h5>
+    <div class="row row-cols-5 g-2 mb-3">
+        {% for shape in ['square', 'rounded', 'circle', 'dot', 'vertical_bars', 'horizontal_bars', 'gapped_square', 'mini_square'] %}
+        <div class="col">
+            <div class="form-check module-shape-option">
+                <input class="form-check-input" type="radio" name="module_shape" id="module_{{ shape }}" value="{{ shape }}" {% if loop.first %}checked{% endif %}>
+                <label class="form-check-label" for="module_{{ shape }}">
+                    <div class="shape-preview" data-shape="{{ shape }}">
+                        <img src="{{ url_for('static', filename='img/styles/module_shapes/' + shape + '.png') }}" alt="{{ shape }}" class="img-fluid">
+                    </div>
+                    <div class="shape-name text-center">{{ shape|capitalize }}</div>
+                </label>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="mb-4">
+    <h5 class="form-label">Forme du contour des marqueurs</h5>
+    <div class="row row-cols-5 g-2 mb-3">
+        {% for shape in ['square', 'rounded_square', 'circle', 'rounded', 'dots', 'diamond', 'corner_cut', 'jagged', 'pointed', 'pixel'] %}
+        <div class="col">
+            <div class="form-check frame-shape-option">
+                <input class="form-check-input" type="radio" name="frame_shape" id="frame_{{ shape }}" value="{{ shape }}" {% if loop.first %}checked{% endif %}>
+                <label class="form-check-label" for="frame_{{ shape }}">
+                    <div class="shape-preview" data-shape="{{ shape }}">
+                        <img src="{{ url_for('static', filename='img/styles/frame_shapes/' + shape + '.png') }}" alt="{{ shape }}" class="img-fluid">
+                    </div>
+                    <div class="shape-name text-center">{{ shape|capitalize }}</div>
+                </label>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="mb-4">
+    <h5 class="form-label">Forme du centre des marqueurs</h5>
+    <div class="row row-cols-5 g-2 mb-3">
+        {% for shape in ['square', 'circle', 'rounded', 'cushion', 'diamond', 'star', 'dots', 'rounded_rect', 'flower', 'leaf'] %}
+        <div class="col">
+            <div class="form-check eye-shape-option">
+                <input class="form-check-input" type="radio" name="eye_shape" id="eye_{{ shape }}" value="{{ shape }}" {% if loop.first %}checked{% endif %}>
+                <label class="form-check-label" for="eye_{{ shape }}">
+                    <div class="shape-preview" data-shape="{{ shape }}">
+                        <img src="{{ url_for('static', filename='img/styles/eye_shapes/' + shape + '.png') }}" alt="{{ shape }}" class="img-fluid">
+                    </div>
+                    <div class="shape-name text-center">{{ shape|capitalize }}</div>
+                </label>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
                                     <div class="row mb-3">
                                         <div class="col-md-6">
                                             <label for="styleErrorCorrection" class="form-label">Correction d'erreur</label>
