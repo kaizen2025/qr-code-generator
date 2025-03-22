@@ -2,577 +2,472 @@
 # -*- coding: utf-8 -*-
 
 """
-Module d'intégration d'icônes de réseaux sociaux dans les QR codes.
-Ce module fournit des fonctionnalités pour ajouter des icônes de réseaux sociaux
-aux QR codes générés.
+Module de gestion des icônes de réseaux sociaux.
+Ce module fournit une bibliothèque d'icônes prêtes à l'emploi pour les réseaux sociaux.
 """
 
 import os
-import uuid
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
-import qrcode
-from datetime import datetime
+import requests
+import base64
+from io import BytesIO
+from PIL import Image
 
-
-class SocialQRGenerator:
+class SocialIconLibrary:
     """
-    Classe pour l'intégration d'icônes de réseaux sociaux dans les QR codes.
-    Fournit des méthodes pour ajouter des icônes de réseaux sociaux aux QR codes.
+    Bibliothèque d'icônes de réseaux sociaux prédéfinies.
+    Fournit des icônes vectorielles et raster pour les principales plateformes.
     """
 
-    def __init__(self, output_dir=None, icons_dir=None):
+    def __init__(self, icons_dir=None, download_if_missing=True):
         """
-        Initialise le générateur de QR codes avec icônes de réseaux sociaux.
+        Initialise la bibliothèque d'icônes de réseaux sociaux.
         
         Args:
-            output_dir (str, optional): Répertoire de sortie pour les QR codes générés.
-                Si non spécifié, utilise le répertoire courant.
-            icons_dir (str, optional): Répertoire contenant les icônes de réseaux sociaux.
-                Si non spécifié, utilise le sous-répertoire 'icons' du répertoire courant.
+            icons_dir (str, optional): Répertoire de stockage des icônes.
+                Si non spécifié, utilise le sous-répertoire 'social_icons' du répertoire courant.
+            download_if_missing (bool): Télécharge automatiquement les icônes manquantes
         """
-        self.output_dir = output_dir or os.path.join(os.getcwd(), 'generated_qrcodes')
-        self.icons_dir = icons_dir or os.path.join(os.getcwd(), 'src/frontend/static/img/social_icons')
+        # Répertoire par défaut des icônes
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        self.icons_dir = icons_dir or os.path.join(current_dir, '..', '..', 'frontend', 'static', 'img', 'social_icons')
         
-        # Création des répertoires s'ils n'existent pas
-        if not os.path.exists(self.output_dir):
-            os.makedirs(self.output_dir)
+        # Créer le répertoire s'il n'existe pas
+        os.makedirs(self.icons_dir, exist_ok=True)
         
-        if not os.path.exists(self.icons_dir):
-            os.makedirs(self.icons_dir)
-        
-        # Dictionnaire des icônes de réseaux sociaux disponibles
-        self.social_icons = {
+        # Configuration des icônes
+        self.icons_config = {
             'facebook': {
-                'path': os.path.join(self.icons_dir, 'facebook.png'),
-                'color': (59, 89, 152)  # Bleu Facebook
+                'name': 'Facebook',
+                'color': '#1877F2',
+                'filename': 'facebook.png',
+                'url': 'https://cdn.jsdelivr.net/npm/simple-icons@v5/icons/facebook.svg',
+                'formats': ['png', 'svg']
             },
             'twitter': {
-                'path': os.path.join(self.icons_dir, 'twitter.png'),
-                'color': (29, 161, 242)  # Bleu Twitter
+                'name': 'Twitter',
+                'color': '#1DA1F2',
+                'filename': 'twitter.png',
+                'url': 'https://cdn.jsdelivr.net/npm/simple-icons@v5/icons/twitter.svg',
+                'formats': ['png', 'svg']
             },
             'instagram': {
-                'path': os.path.join(self.icons_dir, 'instagram.png'),
-                'color': (225, 48, 108)  # Rose Instagram
+                'name': 'Instagram',
+                'color': '#E4405F',
+                'filename': 'instagram.png',
+                'url': 'https://cdn.jsdelivr.net/npm/simple-icons@v5/icons/instagram.svg',
+                'formats': ['png', 'svg']
             },
             'linkedin': {
-                'path': os.path.join(self.icons_dir, 'linkedin.png'),
-                'color': (0, 119, 181)  # Bleu LinkedIn
+                'name': 'LinkedIn',
+                'color': '#0A66C2',
+                'filename': 'linkedin.png',
+                'url': 'https://cdn.jsdelivr.net/npm/simple-icons@v5/icons/linkedin.svg',
+                'formats': ['png', 'svg']
             },
             'youtube': {
-                'path': os.path.join(self.icons_dir, 'youtube.png'),
-                'color': (255, 0, 0)  # Rouge YouTube
+                'name': 'YouTube',
+                'color': '#FF0000',
+                'filename': 'youtube.png',
+                'url': 'https://cdn.jsdelivr.net/npm/simple-icons@v5/icons/youtube.svg',
+                'formats': ['png', 'svg']
             },
             'tiktok': {
-                'path': os.path.join(self.icons_dir, 'tiktok.png'),
-                'color': (0, 0, 0)  # Noir TikTok
+                'name': 'TikTok',
+                'color': '#000000',
+                'filename': 'tiktok.png',
+                'url': 'https://cdn.jsdelivr.net/npm/simple-icons@v5/icons/tiktok.svg',
+                'formats': ['png', 'svg']
             },
             'snapchat': {
-                'path': os.path.join(self.icons_dir, 'snapchat.png'),
-                'color': (255, 252, 0)  # Jaune Snapchat
+                'name': 'Snapchat',
+                'color': '#FFFC00',
+                'filename': 'snapchat.png',
+                'url': 'https://cdn.jsdelivr.net/npm/simple-icons@v5/icons/snapchat.svg',
+                'formats': ['png', 'svg']
             },
             'pinterest': {
-                'path': os.path.join(self.icons_dir, 'pinterest.png'),
-                'color': (230, 0, 35)  # Rouge Pinterest
+                'name': 'Pinterest',
+                'color': '#E60023',
+                'filename': 'pinterest.png',
+                'url': 'https://cdn.jsdelivr.net/npm/simple-icons@v5/icons/pinterest.svg',
+                'formats': ['png', 'svg']
             },
             'whatsapp': {
-                'path': os.path.join(self.icons_dir, 'whatsapp.png'),
-                'color': (37, 211, 102)  # Vert WhatsApp
+                'name': 'WhatsApp',
+                'color': '#25D366',
+                'filename': 'whatsapp.png',
+                'url': 'https://cdn.jsdelivr.net/npm/simple-icons@v5/icons/whatsapp.svg',
+                'formats': ['png', 'svg']
             },
             'telegram': {
-                'path': os.path.join(self.icons_dir, 'telegram.png'),
-                'color': (0, 136, 204)  # Bleu Telegram
+                'name': 'Telegram',
+                'color': '#26A5E4',
+                'filename': 'telegram.png',
+                'url': 'https://cdn.jsdelivr.net/npm/simple-icons@v5/icons/telegram.svg',
+                'formats': ['png', 'svg']
             },
-            'website': {
-                'path': os.path.join(self.icons_dir, 'website.png'),
-                'color': (51, 51, 51)  # Gris foncé
+            'reddit': {
+                'name': 'Reddit',
+                'color': '#FF4500',
+                'filename': 'reddit.png',
+                'url': 'https://cdn.jsdelivr.net/npm/simple-icons@v5/icons/reddit.svg',
+                'formats': ['png', 'svg']
+            },
+            'github': {
+                'name': 'GitHub',
+                'color': '#181717',
+                'filename': 'github.png',
+                'url': 'https://cdn.jsdelivr.net/npm/simple-icons@v5/icons/github.svg',
+                'formats': ['png', 'svg']
+            },
+            'discord': {
+                'name': 'Discord',
+                'color': '#5865F2',
+                'filename': 'discord.png',
+                'url': 'https://cdn.jsdelivr.net/npm/simple-icons@v5/icons/discord.svg',
+                'formats': ['png', 'svg']
+            },
+            'twitch': {
+                'name': 'Twitch',
+                'color': '#9146FF',
+                'filename': 'twitch.png',
+                'url': 'https://cdn.jsdelivr.net/npm/simple-icons@v5/icons/twitch.svg',
+                'formats': ['png', 'svg']
+            },
+            'vimeo': {
+                'name': 'Vimeo',
+                'color': '#1AB7EA',
+                'filename': 'vimeo.png',
+                'url': 'https://cdn.jsdelivr.net/npm/simple-icons@v5/icons/vimeo.svg',
+                'formats': ['png', 'svg']
             },
             'email': {
-                'path': os.path.join(self.icons_dir, 'email.png'),
-                'color': (66, 133, 244)  # Bleu Gmail
+                'name': 'Email',
+                'color': '#EA4335',
+                'filename': 'email.png',
+                'url': 'https://cdn.jsdelivr.net/npm/simple-icons@v5/icons/gmail.svg',
+                'formats': ['png', 'svg']
+            },
+            'website': {
+                'name': 'Site Web',
+                'color': '#4285F4',
+                'filename': 'website.png',
+                'url': 'https://cdn.jsdelivr.net/npm/simple-icons@v5/icons/googlechrome.svg',
+                'formats': ['png', 'svg']
             },
             'phone': {
-                'path': os.path.join(self.icons_dir, 'phone.png'),
-                'color': (76, 175, 80)  # Vert
+                'name': 'Téléphone',
+                'color': '#0F9D58',
+                'filename': 'phone.png',
+                'url': 'https://cdn.jsdelivr.net/npm/simple-icons@v5/icons/phone.svg',
+                'formats': ['png', 'svg']
+            },
+            'spotify': {
+                'name': 'Spotify',
+                'color': '#1DB954',
+                'filename': 'spotify.png',
+                'url': 'https://cdn.jsdelivr.net/npm/simple-icons@v5/icons/spotify.svg',
+                'formats': ['png', 'svg']
+            },
+            'apple': {
+                'name': 'Apple',
+                'color': '#000000',
+                'filename': 'apple.png',
+                'url': 'https://cdn.jsdelivr.net/npm/simple-icons@v5/icons/apple.svg',
+                'formats': ['png', 'svg']
+            },
+            'google': {
+                'name': 'Google',
+                'color': '#4285F4',
+                'filename': 'google.png',
+                'url': 'https://cdn.jsdelivr.net/npm/simple-icons@v5/icons/google.svg',
+                'formats': ['png', 'svg']
             }
         }
+        
+        # Vérification et téléchargement des icônes manquantes
+        if download_if_missing:
+            self.check_and_download_icons()
     
-    def _create_placeholder_icon(self, platform, size=100):
+    def check_and_download_icons(self):
         """
-        Crée une icône de substitution si l'icône demandée n'existe pas.
+        Vérifie la présence des icônes et télécharge celles qui sont manquantes.
+        """
+        for platform, config in self.icons_config.items():
+            # Vérification du fichier PNG
+            png_path = os.path.join(self.icons_dir, config['filename'])
+            if not os.path.exists(png_path):
+                self._download_icon(platform)
+            
+            # Vérification du fichier SVG
+            svg_filename = f"{os.path.splitext(config['filename'])[0]}.svg"
+            svg_path = os.path.join(self.icons_dir, svg_filename)
+            if not os.path.exists(svg_path) and 'svg' in config.get('formats', []):
+                self._download_icon(platform, 'svg')
+    
+    def _download_icon(self, platform, format_type='png'):
+        """
+        Télécharge l'icône d'une plateforme spécifique.
         
         Args:
             platform (str): Nom de la plateforme
-            size (int): Taille de l'icône en pixels
-            
+            format_type (str): Format de l'icône ('png' ou 'svg')
+        
         Returns:
-            PIL.Image: Image de l'icône de substitution
+            bool: True si le téléchargement réussit, False sinon
         """
-        # Création d'une image vide
-        img = Image.new('RGBA', (size, size), (255, 255, 255, 0))
+        if platform not in self.icons_config:
+            return False
+        
+        config = self.icons_config[platform]
+        url = config['url']
+        
+        try:
+            # Téléchargement de l'icône
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            
+            if format_type == 'svg':
+                # Sauvegarde directe du SVG
+                svg_filename = f"{os.path.splitext(config['filename'])[0]}.svg"
+                svg_path = os.path.join(self.icons_dir, svg_filename)
+                with open(svg_path, 'wb') as f:
+                    f.write(response.content)
+            else:
+                # Conversion du SVG en PNG coloré
+                from cairosvg import svg2png
+                
+                # Modifier la couleur du SVG
+                svg_content = response.text
+                svg_content = svg_content.replace('fill="currentColor"', f'fill="{config["color"]}"')
+                
+                # Convertir en PNG
+                png_path = os.path.join(self.icons_dir, config['filename'])
+                svg2png(bytestring=svg_content.encode('utf-8'), write_to=png_path, output_width=200, output_height=200)
+            
+            return True
+            
+        except Exception as e:
+            print(f"Erreur lors du téléchargement de l'icône {platform}: {e}")
+            
+            # Création d'une icône de secours
+            if format_type == 'png':
+                self._create_fallback_icon(platform)
+            
+            return False
+    
+    def _create_fallback_icon(self, platform):
+        """
+        Crée une icône de secours pour une plateforme.
+        
+        Args:
+            platform (str): Nom de la plateforme
+        """
+        if platform not in self.icons_config:
+            return
+        
+        config = self.icons_config[platform]
+        
+        # Création d'une image avec la première lettre
+        from PIL import Image, ImageDraw, ImageFont
+        
+        size = 200
+        img = Image.new('RGBA', (size, size), color=(0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
         
-        # Couleur de fond en fonction de la plateforme
-        bg_color = self.social_icons.get(platform, {}).get('color', (100, 100, 100))
+        # Dessin du cercle de fond
+        color = config.get('color', '#000000')
+        if color.startswith('#'):
+            # Conversion hex en RGB
+            r = int(color[1:3], 16)
+            g = int(color[3:5], 16)
+            b = int(color[5:7], 16)
+            color_rgb = (r, g, b, 255)
+        else:
+            color_rgb = (0, 0, 0, 255)
         
-        # Dessin d'un cercle de fond
-        draw.ellipse([(0, 0), (size, size)], fill=bg_color)
+        # Dessiner le cercle
+        draw.ellipse((0, 0, size, size), fill=color_rgb)
         
-        # Ajout du texte (première lettre de la plateforme)
-        letter = platform[0].upper() if platform else "?"
-        text_size = draw.textlength(letter, font=None)
-        text_position = ((size - text_size) // 2, (size - text_size) // 2)
-        draw.text(text_position, letter, fill=(255, 255, 255))
+        # Ajouter la lettre
+        letter = config.get('name', platform)[0].upper()
         
-        return img
-    
-    def generate_social_qrcode(self, data, social_platform, filename=None, **options):
-        """
-        Génère un QR code avec une icône de réseau social.
-        
-        Args:
-            data (str): Données à encoder dans le QR code (URL, texte, etc.)
-            social_platform (str): Nom du réseau social ('facebook', 'twitter', etc.)
-            filename (str, optional): Nom du fichier de sortie. Si non spécifié,
-                génère un nom basé sur un UUID.
-            **options: Options supplémentaires pour la personnalisation du QR code.
-                - version (int): Version du QR code (1-40)
-                - error_correction (int): Niveau de correction d'erreur
-                - box_size (int): Taille de chaque "boîte" du QR code en pixels
-                - border (int): Taille de la bordure en nombre de boîtes
-                - fill_color (str/tuple): Couleur de remplissage des modules
-                - back_color (str/tuple): Couleur d'arrière-plan
-                - icon_size (float): Taille de l'icône en pourcentage du QR code (0.0-1.0)
-                - icon_position (str): Position de l'icône ('center', 'top_left', etc.)
-                - use_branded_colors (bool): Utiliser la couleur de la marque pour le QR code
-            
-        Returns:
-            str: Chemin du fichier QR code généré.
-        """
-        if not filename:
-            filename = f"social_qrcode_{uuid.uuid4().hex[:8]}.png"
-        
-        # Chemin complet du fichier de sortie
-        output_path = os.path.join(self.output_dir, filename)
-        
-        # Vérification que l'icône existe
-        if social_platform not in self.social_icons:
-            raise ValueError(f"Plateforme sociale '{social_platform}' non reconnue. Options disponibles: {', '.join(self.social_icons.keys())}")
-        
-        icon_info = self.social_icons[social_platform]
-        icon_path = icon_info['path']
-        
-        # Paramètres par défaut
-        version = options.get('version', 1)
-        error_correction = options.get('error_correction', qrcode.constants.ERROR_CORRECT_H)
-        box_size = options.get('box_size', 10)
-        border = options.get('border', 4)
-        fill_color = options.get('fill_color', "black")
-        back_color = options.get('back_color', "white")
-        icon_size = options.get('icon_size', 0.2)  # 20% par défaut
-        icon_position = options.get('icon_position', 'center')
-        use_branded_colors = options.get('use_branded_colors', False)
-        
-        # Utiliser la couleur de la marque si demandé
-        if use_branded_colors:
-            fill_color = icon_info['color']
-        
-        # Génération du QR code
-        qr = qrcode.QRCode(
-            version=version,
-            error_correction=error_correction,
-            box_size=box_size,
-            border=border,
-        )
-        qr.add_data(data)
-        qr.make(fit=True)
-        
-        # Création de l'image QR code
-        qr_img = qr.make_image(fill_color=fill_color, back_color=back_color).convert('RGBA')
-        
-        # Chargement de l'icône
+        # Utiliser une police par défaut
         try:
-            if os.path.exists(icon_path):
-                icon = Image.open(icon_path).convert('RGBA')
-            else:
-                # Utiliser une icône de substitution si le fichier n'existe pas
-                icon = self._create_placeholder_icon(social_platform)
-            
-            # Calcul de la taille de l'icône
-            qr_width, qr_height = qr_img.size
-            icon_max_size = int(min(qr_width, qr_height) * icon_size)
-            
-            # Redimensionnement de l'icône tout en conservant le ratio
-            icon_width, icon_height = icon.size
-            ratio = min(icon_max_size / icon_width, icon_max_size / icon_height)
-            new_icon_width = int(icon_width * ratio)
-            new_icon_height = int(icon_height * ratio)
-            icon = icon.resize((new_icon_width, new_icon_height), Image.LANCZOS)
-            
-            # Calcul de la position de l'icône
-            if icon_position == 'center':
-                position = ((qr_width - new_icon_width) // 2, (qr_height - new_icon_height) // 2)
-            elif icon_position == 'top_left':
-                position = (border * box_size, border * box_size)
-            elif icon_position == 'top_right':
-                position = (qr_width - new_icon_width - border * box_size, border * box_size)
-            elif icon_position == 'bottom_left':
-                position = (border * box_size, qr_height - new_icon_height - border * box_size)
-            elif icon_position == 'bottom_right':
-                position = (qr_width - new_icon_width - border * box_size, qr_height - new_icon_height - border * box_size)
-            else:
-                position = ((qr_width - new_icon_width) // 2, (qr_height - new_icon_height) // 2)
-            
-            # Option pour ajouter un cercle blanc derrière l'icône
-            add_background = options.get('add_background', True)
-            if add_background:
-                # Création d'un masque circulaire blanc
-                bg_size = max(new_icon_width, new_icon_height) + 20  # Légèrement plus grand que l'icône
-                background = Image.new('RGBA', (bg_size, bg_size), (0, 0, 0, 0))
-                draw = ImageDraw.Draw(background)
-                draw.ellipse([(0, 0), (bg_size, bg_size)], fill=(255, 255, 255, 225))  # Blanc semi-transparent
-                
-                # Positionnement du fond
-                bg_position = (
-                    position[0] - (bg_size - new_icon_width) // 2,
-                    position[1] - (bg_size - new_icon_height) // 2
-                )
-                
-                # Application du fond blanc
-                qr_img.paste(background, bg_position, background)
-            
-            # Création d'une nouvelle image pour le résultat final
-            result = Image.new('RGBA', (qr_width, qr_height), (0, 0, 0, 0))
-            
-            # Copie du QR code sur l'image résultat
-            result.paste(qr_img, (0, 0))
-            
-            # Ajout de l'icône
-            result.paste(icon, position, icon)
-            
-            # Sauvegarde de l'image finale
-            result.save(output_path)
-            
-            # Enregistrement des métadonnées
-            options['social_platform'] = social_platform
-            options['icon_path'] = icon_path
-            self._save_metadata(data, output_path, options)
-            
-            return output_path
-            
-        except Exception as e:
-            print(f"Erreur lors de l'ajout de l'icône: {e}")
-            # En cas d'erreur, générer un QR code sans icône
-            qr_img.save(output_path)
-            return output_path
+            # Essayer de charger une police
+            font = ImageFont.truetype("arial.ttf", size // 2)
+        except:
+            # Sinon utiliser la police par défaut
+            font = ImageFont.load_default()
+        
+        # Calculer la position du texte pour le centrer
+        text_width, text_height = draw.textsize(letter, font=font)
+        position = ((size - text_width) // 2, (size - text_height) // 2)
+        
+        # Dessiner le texte
+        draw.text(position, letter, fill=(255, 255, 255, 255), font=font)
+        
+        # Sauvegarder l'image
+        png_path = os.path.join(self.icons_dir, config['filename'])
+        img.save(png_path)
     
-    def generate_multi_social_qrcode(self, data, social_platforms, filename=None, **options):
+    def get_icon_path(self, platform, format_type='png'):
         """
-        Génère un QR code avec plusieurs icônes de réseaux sociaux.
+        Obtient le chemin d'une icône de réseau social.
         
         Args:
-            data (str): Données à encoder dans le QR code (URL, texte, etc.)
-            social_platforms (list): Liste des noms de réseaux sociaux
-            filename (str, optional): Nom du fichier de sortie. Si non spécifié,
-                génère un nom basé sur un UUID.
-            **options: Options supplémentaires pour la personnalisation du QR code.
-                - version (int): Version du QR code (1-40)
-                - error_correction (int): Niveau de correction d'erreur
-                - box_size (int): Taille de chaque "boîte" du QR code en pixels
-                - border (int): Taille de la bordure en nombre de boîtes
-                - fill_color (str/tuple): Couleur de remplissage des modules
-                - back_color (str/tuple): Couleur d'arrière-plan
-                - icon_size (float): Taille des icônes en pourcentage du QR code (0.0-1.0)
-                - layout (str): Disposition des icônes ('circle', 'row', 'column')
-                - layout_padding (int): Espacement entre les icônes
-            
+            platform (str): Nom de la plateforme ('facebook', 'twitter', etc.)
+            format_type (str): Format de l'icône ('png' ou 'svg')
+        
         Returns:
-            str: Chemin du fichier QR code généré.
+            str: Chemin de l'icône, ou None si la plateforme n'existe pas
         """
-        if not filename:
-            filename = f"multi_social_qrcode_{uuid.uuid4().hex[:8]}.png"
+        if platform not in self.icons_config:
+            return None
         
-        # Chemin complet du fichier de sortie
-        output_path = os.path.join(self.output_dir, filename)
+        config = self.icons_config[platform]
         
-        # Vérification que les icônes existent
-        for platform in social_platforms:
-            if platform not in self.social_icons:
-                raise ValueError(f"Plateforme sociale '{platform}' non reconnue. Options disponibles: {', '.join(self.social_icons.keys())}")
+        if format_type == 'svg':
+            filename = f"{os.path.splitext(config['filename'])[0]}.svg"
+        else:
+            filename = config['filename']
         
-        # Paramètres par défaut
-        version = options.get('version', 1)
-        error_correction = options.get('error_correction', qrcode.constants.ERROR_CORRECT_H)
-        box_size = options.get('box_size', 10)
-        border = options.get('border', 4)
-        fill_color = options.get('fill_color', "black")
-        back_color = options.get('back_color', "white")
-        icon_size = options.get('icon_size', 0.15)  # 15% par défaut pour les multi-icônes
-        layout = options.get('layout', 'circle')
-        layout_padding = options.get('layout_padding', 5)  # Espacement entre les icônes
+        icon_path = os.path.join(self.icons_dir, filename)
         
-        # Génération du QR code
-        qr = qrcode.QRCode(
-            version=version,
-            error_correction=error_correction,
-            box_size=box_size,
-            border=border,
-        )
-        qr.add_data(data)
-        qr.make(fit=True)
+        # Vérifier si l'icône existe
+        if not os.path.exists(icon_path):
+            if self._download_icon(platform, format_type):
+                return icon_path
+            else:
+                return None
         
-        # Création de l'image QR code
-        qr_img = qr.make_image(fill_color=fill_color, back_color=back_color).convert('RGBA')
-        qr_width, qr_height = qr_img.size
+        return icon_path
+    
+    def get_icon_url(self, platform, format_type='png'):
+        """
+        Obtient l'URL relative d'une icône pour l'affichage dans le frontend.
         
-        # Création d'une nouvelle image pour le résultat final
-        result = Image.new('RGBA', (qr_width, qr_height), (0, 0, 0, 0))
+        Args:
+            platform (str): Nom de la plateforme ('facebook', 'twitter', etc.)
+            format_type (str): Format de l'icône ('png' ou 'svg')
         
-        # Copie du QR code sur l'image résultat
-        result.paste(qr_img, (0, 0))
+        Returns:
+            str: URL relative de l'icône
+        """
+        if platform not in self.icons_config:
+            return None
+        
+        config = self.icons_config[platform]
+        
+        if format_type == 'svg':
+            filename = f"{os.path.splitext(config['filename'])[0]}.svg"
+        else:
+            filename = config['filename']
+        
+        # Vérifier si l'icône existe
+        icon_path = os.path.join(self.icons_dir, filename)
+        if not os.path.exists(icon_path):
+            if not self._download_icon(platform, format_type):
+                return None
+        
+        # Retourner l'URL relative
+        return f"/static/img/social_icons/{filename}"
+    
+    def get_icon_base64(self, platform):
+        """
+        Obtient une icône encodée en base64 pour utilisation directe dans le HTML/CSS.
+        
+        Args:
+            platform (str): Nom de la plateforme ('facebook', 'twitter', etc.)
+        
+        Returns:
+            str: Icône encodée en base64 avec préfixe data:image
+        """
+        icon_path = self.get_icon_path(platform)
+        if not icon_path:
+            return None
         
         try:
-            # Calcul de la taille des icônes
-            icon_max_size = int(min(qr_width, qr_height) * icon_size)
+            with open(icon_path, 'rb') as f:
+                image_data = f.read()
             
-            # Nombre d'icônes
-            num_icons = len(social_platforms)
+            # Déterminer le type MIME
+            mime_type = 'image/png'  # Par défaut
+            if icon_path.lower().endswith('.svg'):
+                mime_type = 'image/svg+xml'
+            elif icon_path.lower().endswith('.jpg') or icon_path.lower().endswith('.jpeg'):
+                mime_type = 'image/jpeg'
             
-            # Chargement des icônes
-            icons = []
-            for platform in social_platforms:
-                icon_path = self.social_icons[platform]['path']
-                if os.path.exists(icon_path):
-                    icon = Image.open(icon_path).convert('RGBA')
-                else:
-                    # Utiliser une icône de substitution
-                    icon = self._create_placeholder_icon(platform, size=icon_max_size)
-                
-                # Redimensionnement de l'icône
-                icon_width, icon_height = icon.size
-                ratio = min(icon_max_size / icon_width, icon_max_size / icon_height)
-                new_icon_width = int(icon_width * ratio)
-                new_icon_height = int(icon_height * ratio)
-                icon = icon.resize((new_icon_width, new_icon_height), Image.LANCZOS)
-                
-                # Ajouter l'icône redimensionnée à la liste
-                icons.append(icon)
-            
-            # Disposition des icônes
-            if layout == 'circle':
-                # Disposition en cercle autour du centre
-                import math
-                
-                # Rayon du cercle (30% de la taille du QR code)
-                radius = min(qr_width, qr_height) * 0.3
-                
-                # Centre du QR code
-                center_x = qr_width // 2
-                center_y = qr_height // 2
-                
-                # Création d'un masque circulaire blanc pour le fond
-                background_size = int(radius * 1.5)
-                background = Image.new('RGBA', (background_size, background_size), (0, 0, 0, 0))
-                draw = ImageDraw.Draw(background)
-                draw.ellipse([(0, 0), (background_size, background_size)], fill=(255, 255, 255, 225))
-                
-                # Positionnement du fond
-                bg_position = (center_x - background_size // 2, center_y - background_size // 2)
-                result.paste(background, bg_position, background)
-                
-                # Placement des icônes en cercle
-                for i, icon in enumerate(icons):
-                    # Angle entre chaque icône
-                    angle = i * (2 * math.pi / num_icons)
-                    
-                    # Position de l'icône
-                    x = center_x + int(radius * math.cos(angle)) - icon.width // 2
-                    y = center_y + int(radius * math.sin(angle)) - icon.height // 2
-                    
-                    # Ajout de l'icône
-                    result.paste(icon, (x, y), icon)
-                
-            elif layout == 'row':
-                # Disposition en ligne horizontale en bas du QR code
-                total_width = sum(icon.width for icon in icons) + layout_padding * (num_icons - 1)
-                start_x = (qr_width - total_width) // 2
-                y = qr_height - icon_max_size - border * box_size
-                
-                # Fond blanc
-                background = Image.new('RGBA', (total_width + layout_padding * 2, icon_max_size + layout_padding * 2), (255, 255, 255, 225))
-                bg_position = (start_x - layout_padding, y - layout_padding)
-                result.paste(background, bg_position, background)
-                
-                # Placement des icônes
-                x = start_x
-                for icon in icons:
-                    # Ajout de l'icône
-                    result.paste(icon, (x, y), icon)
-                    x += icon.width + layout_padding
-                
-            elif layout == 'column':
-                # Disposition en colonne verticale à droite du QR code
-                total_height = sum(icon.height for icon in icons) + layout_padding * (num_icons - 1)
-                x = qr_width - icon_max_size - border * box_size
-                start_y = (qr_height - total_height) // 2
-                
-                # Fond blanc
-                background = Image.new('RGBA', (icon_max_size + layout_padding * 2, total_height + layout_padding * 2), (255, 255, 255, 225))
-                bg_position = (x - layout_padding, start_y - layout_padding)
-                result.paste(background, bg_position, background)
-                
-                # Placement des icônes
-                y = start_y
-                for icon in icons:
-                    # Ajout de l'icône
-                    result.paste(icon, (x, y), icon)
-                    y += icon.height + layout_padding
-                
-            elif layout == 'grid':
-                # Disposition en grille
-                cols = int(math.sqrt(num_icons))
-                rows = (num_icons + cols - 1) // cols
-                
-                # Calcul de la taille totale de la grille
-                grid_width = cols * icon_max_size + (cols - 1) * layout_padding
-                grid_height = rows * icon_max_size + (rows - 1) * layout_padding
-                
-                # Position de départ (centré)
-                start_x = (qr_width - grid_width) // 2
-                start_y = (qr_height - grid_height) // 2
-                
-                # Fond blanc
-                background = Image.new('RGBA', (grid_width + layout_padding * 2, grid_height + layout_padding * 2), (255, 255, 255, 225))
-                bg_position = (start_x - layout_padding, start_y - layout_padding)
-                result.paste(background, bg_position, background)
-                
-                # Placement des icônes
-                for i, icon in enumerate(icons):
-                    col = i % cols
-                    row = i // cols
-                    
-                    x = start_x + col * (icon_max_size + layout_padding)
-                    y = start_y + row * (icon_max_size + layout_padding)
-                    
-                    result.paste(icon, (x, y), icon)
-            
-            # Sauvegarde de l'image finale
-            result.save(output_path)
-            
-            # Enregistrement des métadonnées
-            options['social_platforms'] = social_platforms
-            options['layout'] = layout
-            self._save_metadata(data, output_path, options)
-            
-            return output_path
+            # Encoder en base64
+            encoded = base64.b64encode(image_data).decode('utf-8')
+            return f"data:{mime_type};base64,{encoded}"
             
         except Exception as e:
-            print(f"Erreur lors de l'ajout des icônes: {e}")
-            # En cas d'erreur, générer un QR code sans icône
-            qr_img.save(output_path)
-            return output_path
+            print(f"Erreur lors de l'encodage de l'icône {platform}: {e}")
+            return None
     
-    def generate_themed_social_qrcode(self, data, social_platform, filename=None, **options):
+    def get_all_platforms(self):
         """
-        Génère un QR code thématique pour un réseau social spécifique.
+        Obtient la liste de toutes les plateformes disponibles.
         
-        Args:
-            data (str): Données à encoder dans le QR code (URL, texte, etc.)
-            social_platform (str): Nom du réseau social
-            filename (str, optional): Nom du fichier de sortie
-            **options: Options supplémentaires pour la personnalisation
-            
         Returns:
-            str: Chemin du fichier QR code généré
+            list: Liste des plateformes avec leurs informations
         """
-        if not filename:
-            filename = f"themed_{social_platform}_qrcode_{uuid.uuid4().hex[:8]}.png"
+        platforms = []
+        for platform, config in self.icons_config.items():
+            icon_url = self.get_icon_url(platform)
+            platforms.append({
+                'id': platform,
+                'name': config['name'],
+                'color': config['color'],
+                'icon_url': icon_url
+            })
         
-        # Vérification que la plateforme existe
-        if social_platform not in self.social_icons:
-            raise ValueError(f"Plateforme sociale '{social_platform}' non reconnue. Options disponibles: {', '.join(self.social_icons.keys())}")
-        
-        # Récupération des informations de la plateforme
-        platform_color = self.social_icons[social_platform]['color']
-        
-        # Options par défaut pour les QR codes thématiques
-        theme_options = {
-            'fill_color': platform_color,
-            'back_color': "white",
-            'icon_size': 0.25,
-            'add_background': True,
-            'error_correction': qrcode.constants.ERROR_CORRECT_H,
-            'version': options.get('version', 1),
-            'box_size': options.get('box_size', 10),
-            'border': options.get('border', 4)
-        }
-        
-        # Fusion avec les options fournies
-        theme_options.update(options)
-        
-        # Génération du QR code thématique
-        return self.generate_social_qrcode(data, social_platform, filename, **theme_options)
+        return platforms
     
-    def _save_metadata(self, data, output_path, options=None):
+    def resize_icon(self, platform, size=(64, 64)):
         """
-        Enregistre les métadonnées du QR code généré.
+        Redimensionne une icône à la taille spécifiée.
         
         Args:
-            data (str): Données encodées dans le QR code
-            output_path (str): Chemin du fichier QR code généré
-            options (dict, optional): Options utilisées pour la génération
+            platform (str): Nom de la plateforme
+            size (tuple): Dimensions (largeur, hauteur)
+        
+        Returns:
+            BytesIO: Objet contenant l'image redimensionnée
         """
-        metadata_dir = os.path.join(self.output_dir, 'metadata')
-        if not os.path.exists(metadata_dir):
-            os.makedirs(metadata_dir)
+        icon_path = self.get_icon_path(platform)
+        if not icon_path:
+            return None
         
-        # Nom du fichier de métadonnées basé sur le nom du QR code
-        qr_filename = os.path.basename(output_path)
-        metadata_filename = f"{os.path.splitext(qr_filename)[0]}.txt"
-        metadata_path = os.path.join(metadata_dir, metadata_filename)
-        
-        # Création du contenu des métadonnées
-        metadata_content = [
-            f"Date de création: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-            f"Données: {data}",
-            f"Fichier: {qr_filename}",
-        ]
-        
-        # Ajout des options si spécifiées
-        if options:
-            metadata_content.append("Options:")
-            for key, value in options.items():
-                metadata_content.append(f"  {key}: {value}")
-        
-        # Écriture des métadonnées dans le fichier
-        with open(metadata_path, 'w', encoding='utf-8') as f:
-            f.write('\n'.join(metadata_content))
+        try:
+            img = Image.open(icon_path)
+            img = img.resize(size, Image.LANCZOS)
+            
+            # Conversion en BytesIO pour utilisation en mémoire
+            output = BytesIO()
+            img.save(output, format='PNG')
+            output.seek(0)
+            
+            return output
+            
+        except Exception as e:
+            print(f"Erreur lors du redimensionnement de l'icône {platform}: {e}")
+            return None
 
 
 # Exemple d'utilisation si exécuté directement
 if __name__ == "__main__":
-    generator = SocialQRGenerator()
+    icon_library = SocialIconLibrary()
     
-    # Exemple 1: QR code avec une icône de réseau social
-    social_qr = generator.generate_social_qrcode(
-        "https://www.facebook.com/example",
-        "facebook",
-        "example_facebook.png"
-    )
-    print(f"QR code avec icône Facebook généré: {social_qr}")
+    # Obtenir la liste des plateformes disponibles
+    platforms = icon_library.get_all_platforms()
+    print(f"Plateformes disponibles: {len(platforms)}")
     
-    # Exemple 2: QR code avec plusieurs icônes de réseaux sociaux
-    multi_social_qr = generator.generate_multi_social_qrcode(
-        "https://www.example.com",
-        ["facebook", "twitter", "instagram", "linkedin"],
-        "example_multi_social.png",
-        layout="circle"
-    )
-    print(f"QR code avec plusieurs icônes généré: {multi_social_qr}")
+    # Afficher le chemin d'une icône
+    facebook_path = icon_library.get_icon_path('facebook')
+    print(f"Chemin de l'icône Facebook: {facebook_path}")
     
-    # Exemple 3: QR code thématique
-    themed_qr = generator.generate_themed_social_qrcode(
-        "https://www.instagram.com/example",
-        "instagram",
-        "example_themed_instagram.png"
-    )
-    print(f"QR code thématique Instagram généré: {themed_qr}")
+    # Obtenir l'URL d'une icône
+    twitter_url = icon_library.get_icon_url('twitter')
+    print(f"URL de l'icône Twitter: {twitter_url}")
