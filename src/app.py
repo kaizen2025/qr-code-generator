@@ -6,174 +6,53 @@ Application principale Flask pour le générateur de QR codes personnalisé.
 Ce module fournit l'interface web pour interagir avec les modules de génération,
 personnalisation et exportation de QR codes.
 """
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-"""
-Application principale Flask pour le générateur de QR codes personnalisé.
-Ce module fournit l'interface web pour interagir avec les modules de génération,
-personnalisation et exportation de QR codes.
-"""
 
 import os
-import uuid
-from datetime import import datetime
-from flask import Flask, render_template, re#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-"""
-Application principale Flask pour le générateur de QR codes personnalisé.
-Ce module fournit l'interface web pour interagir avec les modules de génération,
-personnalisation et exportation de QR codes.
-"""
-
-import os
-import uuid
-from datetime import import datetime
-from flask import Flask, render_template, re#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-"""
-Application principale Flask pour le générateur de QR codes personnalisé.
-Ce module fournit l'interface web pour interagir avec les modules de génération,
-personnalisation et exportation de QR codes.
-"""
-
-import os
-import uuid
-from datetime import import datetime
-from flask import Flask, render_template, re#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-"""
-Application principale Flask pour le générateur de QR codes personnalisé.
-Ce module fournit l'interface web pour interagir avec les modules de génération,
-personnalisation et exportation de QR codes.
-"""
-
-import os
+import sys
 import uuid
 from datetime import datetime
 from flask import Flask, render_template, request, jsonify, send_from_directory, url_for, redirect
 
-# Import des modules backend
-from src.backend.qr_generator.basic_generator import QRCodeGenerator
-from src.backend.customization.style_customizer import QRCodeCustomizer
-from src.backend.export.exporter import QRCodeExporter
+# Add the parent directory to sys.path for imports to work
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
 
-# Création de l'application Flask
-app = Flask(__name__,
-                        static_folder='frontend/static',
-                        template_folder='frontend/templates')
-
-@app.context_processor
-def inject_now():
-                return {'now': datetime.now()}
-            
-# Configuration de l'application
-app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
-app.config['GENERATED_FOLDER'] = os.path.join(os.getcwd(), 'generated_qrcodes')
-app.config['EXPORTED_FOLDER'] = os.path.join(os.getcwd(), 'exported_qrcodes')
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max upload size
-
-# Création des dossiers nécessaires s'ils n'existent pas
-for folder in [app.config['UPLOAD_FOLDER'], app.config['GENERATED_FOLDER'], app.config['EXPORTED_FOLDER']]:
-                if not os.path.exists(folder):
-                                    os.makedirs(folder)quest, jsonify, send_from_directory, url_for, redirect
-
-# Import des modules backend
-from src.backend.qr_generator.basic_generator import QRCodeGenerator
-from src.backend.customization.style_customizer import QRCodeCustomizer
-from src.backend.export.exporter import QRCodeExporter
-
-# Création de l'application Flask
-app = Flask(__name__,
-                        static_folder='frontend/static',
-                        template_folder='frontend/templates')
-
-@app.context_processor
-def inject_now():
-                return {'now': datetime.now()}
-            
-# Configuration de l'application
-app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
-app.config['GENERATED_FOLDER'] = os.path.join(os.getcwd(), 'generated_qrcodes')
-app.config['EXPORTED_FOLDER'] = os.path.join(os.getcwd(), 'exported_qrcodes')
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max upload size
-
-# Création des dossiers nécessaires s'ils n'existent pas
-for folder in [app.config['UPLOAD_FOLDER'], app.config['GENERATED_FOLDER'], app.config['EXPORTED_FOLDER']]:
-                if not os.path.exists(folder):
-                                    os.makedirs(folder)quest, jsonify, send_from_directory, url_for, redirect
-
-# Import des modules backend
-from src.backend.qr_generator.basic_generator import QRCodeGenerator
-from src.backend.customization.style_customizer import QRCodeCustomizer
-from src.backend.export.exporter import QRCodeExporter
-
-# Création de l'application Flask
-app = Flask(__name__,
-                        static_folder='frontend/static',
-                        template_folder='frontend/templates')
-
-@app.context_processor
-def inject_now():
-                return {'now': datetime.now()}
-            
-# Configuration de l'application
-app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
-app.config['GENERATED_FOLDER'] = os.path.join(os.getcwd(), 'generated_qrcodes')
-app.config['EXPORTED_FOLDER'] = os.path.join(os.getcwd(), 'exported_qrcodes')
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max upload size
-
-# Création des dossiers nécessaires s'ils n'existent pas
-for folder in [app.config['UPLOAD_FOLDER'], app.config['GENERATED_FOLDER'], app.config['EXPORTED_FOLDER']]:
-                if not os.path.exists(folder):
-                                    os.makedirs(folder)quest, jsonify, send_from_directory, url_for, redirect
-
-# Import des modules backend
-from src.backend.qr_generator.basic_generator import QRCodeGenerator
-from src.backend.customization.style_customizer import QRCodeCustomizer
-from src.backend.export.exporter import QRCodeExporter
-
-# Création de l'application Flask
-app = Flask(__name__,
-                        static_folder='frontend/static',
-                        template_folder='frontend/templates')
-
-@app.context_processor
-def inject_now():
-                return {'now': datetime.now()}
-
-# Configuration de l'application
-app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
-app.config['GENERATED_FOLDER'] = os.path.join(os.getcwd(), 'generated_qrcodes')
-app.config['EXPORTED_FOLDER'] = os.path.join(os.getcwd(), 'exported_qrcodes')
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max upload size
-
-# Création des dossiers nécessaires s'ils n'existent pas
-for folder in [app.config['UPLOAD_FOLDER'], app.config['GENERATED_FOLDER'], app.config['EXPORTED_FOLDER']]:
-                if not os.path.exists(folder):
-                                    os.makedirs(folder)
-import os
-import uuid
-from datetime import datetime
-from flask import Flask, render_template, request, jsonify, send_from_directory, url_for, redirect
-
-# Import des modules backend
-from src.backend.qr_generator.basic_generator import QRCodeGenerator
-from src.backend.customization.style_customizer import QRCodeCustomizer
-from src.backend.export.exporter import QRCodeExporter
+# Import des modules backend - with try/except for different environments
+try:
+    # Try direct imports first (when running from src directory)
+    from backend.qr_generator.basic_generator import QRCodeGenerator
+    from backend.customization.style_customizer import QRCodeCustomizer
+    from backend.export.exporter import QRCodeExporter
+except ImportError:
+    # Fall back to fully qualified imports 
+    from src.backend.qr_generator.basic_generator import QRCodeGenerator
+    from src.backend.customization.style_customizer import QRCodeCustomizer
+    from src.backend.export.exporter import QRCodeExporter
 
 # Création de l'application Flask
 app = Flask(__name__, 
             static_folder='frontend/static',
             template_folder='frontend/templates')
 
-# Configuration de l'application
-app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
-app.config['GENERATED_FOLDER'] = os.path.join(os.getcwd(), 'generated_qrcodes')
-app.config['EXPORTED_FOLDER'] = os.path.join(os.getcwd(), 'exported_qrcodes')
+# Add context processor for datetime
+@app.context_processor
+def inject_now():
+    return {'now': datetime.now()}
+
+# Base directory determination - ensures paths work both locally and on Render
+if os.environ.get('RENDER'):
+    # On Render
+    BASE_DIR = os.environ.get('RENDER_PROJECT_DIR', os.getcwd())
+else:
+    # Local development
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Configuration de l'application with better path handling
+app.config['UPLOAD_FOLDER'] = os.path.join(BASE_DIR, 'uploads')
+app.config['GENERATED_FOLDER'] = os.path.join(BASE_DIR, 'generated_qrcodes')
+app.config['EXPORTED_FOLDER'] = os.path.join(BASE_DIR, 'exported_qrcodes')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max upload size
 
 # Création des dossiers nécessaires s'ils n'existent pas
@@ -420,36 +299,45 @@ def history():
     qr_codes = []
     
     # Parcours du dossier des QR codes générés
-    for filename in os.listdir(app.config['GENERATED_FOLDER']):
-        if filename.endswith('.png') and filename.startswith('qrcode_'):
-            # Chemin complet du fichier
-            file_path = os.path.join(app.config['GENERATED_FOLDER'], filename)
-            
-            # Métadonnées
-            metadata_path = os.path.join(app.config['GENERATED_FOLDER'], 'metadata', f"{os.path.splitext(filename)[0]}.txt")
-            metadata = {}
-            
-            if os.path.exists(metadata_path):
-                with open(metadata_path, 'r', encoding='utf-8') as f:
-                    for line in f:
-                        if ':' in line:
-                            key, value = line.split(':', 1)
-                            metadata[key.strip()] = value.strip()
-            
-            # Ajout à la liste
-            qr_codes.append({
-                'filename': filename,
-                'path': file_path,
-                'relative_path': filename,
-                'download_url': url_for('download_qrcode', filename=filename),
-                'date': metadata.get('Date de création', 'Inconnue'),
-                'data': metadata.get('Données', 'Inconnue')
-            })
+    try:
+        for filename in os.listdir(app.config['GENERATED_FOLDER']):
+            if filename.endswith('.png') and filename.startswith('qrcode_'):
+                # Chemin complet du fichier
+                file_path = os.path.join(app.config['GENERATED_FOLDER'], filename)
+                
+                # Métadonnées
+                metadata_path = os.path.join(app.config['GENERATED_FOLDER'], 'metadata', f"{os.path.splitext(filename)[0]}.txt")
+                metadata = {}
+                
+                if os.path.exists(metadata_path):
+                    try:
+                        with open(metadata_path, 'r', encoding='utf-8') as f:
+                            for line in f:
+                                if ':' in line:
+                                    key, value = line.split(':', 1)
+                                    metadata[key.strip()] = value.strip()
+                    except Exception as e:
+                        app.logger.error(f"Error reading metadata file {metadata_path}: {e}")
+                
+                # Ajout à la liste
+                qr_codes.append({
+                    'filename': filename,
+                    'path': file_path,
+                    'relative_path': filename,
+                    'download_url': url_for('download_qrcode', filename=filename),
+                    'date': metadata.get('Date de création', 'Inconnue'),
+                    'data': metadata.get('Données', 'Inconnue')
+                })
+    except Exception as e:
+        app.logger.error(f"Error listing QR codes: {e}")
     
     # Tri par date (plus récent en premier)
-    qr_codes.sort(key=lambda x: x['date'], reverse=True)
+    try:
+        qr_codes.sort(key=lambda x: x['date'], reverse=True)
+    except Exception as e:
+        app.logger.error(f"Error sorting QR codes: {e}")
     
-    return render_template('history.html', qr_codes=qr_codes)
+    return render_template('history.html', qr_codes=qr_codes, export_formats=EXPORT_FORMATS)
 
 @app.route('/qrcodes/<filename>')
 def download_qrcode(filename):
