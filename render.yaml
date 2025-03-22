@@ -1,5 +1,9 @@
-name: qr-code-generator
-type: web
-env: python
-buildCommand: pip install -r requirements.txt
-startCommand: gunicorn src.app:app
+services:
+  - type: web
+    name: qr-code-generator
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python src/render_init.py && gunicorn --bind 0.0.0.0:$PORT src.app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11
