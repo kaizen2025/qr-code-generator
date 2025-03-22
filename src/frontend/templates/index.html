@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Générateur de QR Codes Personnalisé - Anecoop-France</title>
+    <title>Générateur de QR Codes Personnalisé</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon">
-    <meta name="description" content="Générateur de QR codes hautement personnalisable avec intégration de logos et d'éléments de réseaux sociaux.">
+    <meta name="description" content="Générateur de QR codes personnalisables avec intégration de logos et d'éléments de réseaux sociaux.">
 </head>
 <body>
     <header>
         <div class="container">
             <div class="logo">
-                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo Anecoop-France">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo">
                 <h1>Générateur de QR Codes Personnalisé</h1>
             </div>
             <nav>
@@ -27,24 +27,25 @@
     <main>
         <div class="container">
             <div class="app-container">
-                <!-- Panneau de gauche - Options de personnalisation -->
+                <!-- Left panel - Customization options -->
                 <div class="options-panel">
                     <form id="qr-form" method="post">
-                        <!-- Navigation par onglets -->
+                        <!-- Tabs navigation -->
                         <div class="tabs">
-                            <button type="button" class="tab-button active" data-tab="basic">Basique</button>
+                            <button type="button" class="tab-button" data-tab="basic">Basique</button>
                             <button type="button" class="tab-button" data-tab="custom">Personnalisé</button>
                             <button type="button" class="tab-button" data-tab="logo">Logo</button>
                             <button type="button" class="tab-button" data-tab="styled">Style</button>
                             <button type="button" class="tab-button" data-tab="social">Social</button>
                         </div>
 
-                        <!-- Conteneurs d'onglets -->
-                        <!-- Onglet Basique -->
-                        <div id="tab-basic" class="tab-content active">
+                        <!-- Tab contents -->
+                        <!-- Basic Tab -->
+                        <div id="tab-basic" class="tab-content">
                             <div class="form-group">
                                 <label for="qr-data">Contenu du QR code</label>
                                 <textarea id="qr-data" name="data" placeholder="URL, texte, coordonnées..." required></textarea>
+                                <p class="hint">Entrez le contenu à encoder dans le QR code (URL, texte, etc.)</p>
                             </div>
                             
                             <div class="form-row">
@@ -72,7 +73,7 @@
                             
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label for="qr-box-size">Taille de module</label>
+                                    <label for="qr-box-size">Taille des modules</label>
                                     <div class="range-container">
                                         <input type="range" id="qr-box-size" name="box_size" min="5" max="20" value="10">
                                         <span id="qr-box-size-value">10</span>
@@ -88,7 +89,7 @@
                             </div>
                         </div>
                         
-                        <!-- Onglet Personnalisé -->
+                        <!-- Custom Tab -->
                         <div id="tab-custom" class="tab-content">
                             <div class="form-group">
                                 <label for="qr-data-custom">Contenu du QR code</label>
@@ -106,104 +107,106 @@
                                 </div>
                             </div>
                             
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>Forme des modules</label>
-                                    <div class="shape-selector">
-                                        <div class="shape-option module-shape selected" data-value="square">
-                                            <img src="{{ url_for('static', filename='img/styles/module_shapes/square.png') }}" alt="Carré">
-                                            <span>Carré</span>
-                                        </div>
-                                        <div class="shape-option module-shape" data-value="rounded">
-                                            <img src="{{ url_for('static', filename='img/styles/module_shapes/rounded.png') }}" alt="Arrondi">
-                                            <span>Arrondi</span>
-                                        </div>
-                                        <div class="shape-option module-shape" data-value="circle">
-                                            <img src="{{ url_for('static', filename='img/styles/module_shapes/circle.png') }}" alt="Cercle">
-                                            <span>Cercle</span>
-                                        </div>
-                                        <div class="shape-option module-shape" data-value="dot">
-                                            <img src="{{ url_for('static', filename='img/styles/module_shapes/dot.png') }}" alt="Point">
-                                            <span>Point</span>
-                                        </div>
-                                        <div class="shape-option module-shape" data-value="vertical_bars">
-                                            <img src="{{ url_for('static', filename='img/styles/module_shapes/vertical_bars.png') }}" alt="Barres V.">
-                                            <span>Barres V.</span>
-                                        </div>
-                                        <div class="shape-option module-shape" data-value="horizontal_bars">
-                                            <img src="{{ url_for('static', filename='img/styles/module_shapes/horizontal_bars.png') }}" alt="Barres H.">
-                                            <span>Barres H.</span>
-                                        </div>
-                                        <div class="shape-option module-shape" data-value="gapped_square">
-                                            <img src="{{ url_for('static', filename='img/styles/module_shapes/gapped_square.png') }}" alt="Carré espacé">
-                                            <span>Carré esp.</span>
-                                        </div>
-                                        <div class="shape-option module-shape" data-value="mini_square">
-                                            <img src="{{ url_for('static', filename='img/styles/module_shapes/mini_square.png') }}" alt="Mini carré">
-                                            <span>Mini carré</span>
-                                        </div>
+                            <div class="form-group">
+                                <label>Forme des modules</label>
+                                <div class="shape-selector">
+                                    <div class="shape-option module-shape selected" data-value="square">
+                                        <img src="{{ url_for('static', filename='img/styles/module_shapes/square.png') }}" alt="Carré">
+                                        <span>Carré</span>
+                                    </div>
+                                    <div class="shape-option module-shape" data-value="rounded">
+                                        <img src="{{ url_for('static', filename='img/styles/module_shapes/rounded.png') }}" alt="Arrondi">
+                                        <span>Arrondi</span>
+                                    </div>
+                                    <div class="shape-option module-shape" data-value="circle">
+                                        <img src="{{ url_for('static', filename='img/styles/module_shapes/circle.png') }}" alt="Cercle">
+                                        <span>Cercle</span>
+                                    </div>
+                                    <div class="shape-option module-shape" data-value="dot">
+                                        <img src="{{ url_for('static', filename='img/styles/module_shapes/dot.png') }}" alt="Point">
+                                        <span>Point</span>
+                                    </div>
+                                    <div class="shape-option module-shape" data-value="vertical_bars">
+                                        <img src="{{ url_for('static', filename='img/styles/module_shapes/vertical_bars.png') }}" alt="Barres V.">
+                                        <span>Barres V.</span>
+                                    </div>
+                                    <div class="shape-option module-shape" data-value="horizontal_bars">
+                                        <img src="{{ url_for('static', filename='img/styles/module_shapes/horizontal_bars.png') }}" alt="Barres H.">
+                                        <span>Barres H.</span>
+                                    </div>
+                                    <div class="shape-option module-shape" data-value="gapped_square">
+                                        <img src="{{ url_for('static', filename='img/styles/module_shapes/gapped_square.png') }}" alt="Carré espacé">
+                                        <span>Carré esp.</span>
+                                    </div>
+                                    <div class="shape-option module-shape" data-value="mini_square">
+                                        <img src="{{ url_for('static', filename='img/styles/module_shapes/mini_square.png') }}" alt="Mini carré">
+                                        <span>Mini carré</span>
                                     </div>
                                 </div>
                             </div>
                             
-                            <div class="form-row">
-                                <div class="form-group full-width">
-                                    <label>Forme des yeux</label>
-                                    <div class="shape-selector">
-                                        <div class="shape-option eye-shape selected" data-value="square">
-                                            <img src="{{ url_for('static', filename='img/styles/eye_shapes/square.png') }}" alt="Carré">
-                                            <span>Carré</span>
-                                        </div>
-                                        <div class="shape-option eye-shape" data-value="circle">
-                                            <img src="{{ url_for('static', filename='img/styles/eye_shapes/circle.png') }}" alt="Cercle">
-                                            <span>Cercle</span>
-                                        </div>
-                                        <div class="shape-option eye-shape" data-value="rounded">
-                                            <img src="{{ url_for('static', filename='img/styles/eye_shapes/rounded.png') }}" alt="Arrondi">
-                                            <span>Arrondi</span>
-                                        </div>
-                                        <div class="shape-option eye-shape" data-value="cushion">
-                                            <img src="{{ url_for('static', filename='img/styles/eye_shapes/cushion.png') }}" alt="Coussin">
-                                            <span>Coussin</span>
-                                        </div>
-                                        <div class="shape-option eye-shape" data-value="diamond">
-                                            <img src="{{ url_for('static', filename='img/styles/eye_shapes/diamond.png') }}" alt="Losange">
-                                            <span>Losange</span>
-                                        </div>
+                            <div class="form-group">
+                                <label>Forme des yeux</label>
+                                <div class="shape-selector">
+                                    <div class="shape-option eye-shape selected" data-value="square">
+                                        <img src="{{ url_for('static', filename='img/styles/eye_shapes/square.png') }}" alt="Carré">
+                                        <span>Carré</span>
+                                    </div>
+                                    <div class="shape-option eye-shape" data-value="circle">
+                                        <img src="{{ url_for('static', filename='img/styles/eye_shapes/circle.png') }}" alt="Cercle">
+                                        <span>Cercle</span>
+                                    </div>
+                                    <div class="shape-option eye-shape" data-value="rounded">
+                                        <img src="{{ url_for('static', filename='img/styles/eye_shapes/rounded.png') }}" alt="Arrondi">
+                                        <span>Arrondi</span>
+                                    </div>
+                                    <div class="shape-option eye-shape" data-value="cushion">
+                                        <img src="{{ url_for('static', filename='img/styles/eye_shapes/cushion.png') }}" alt="Coussin">
+                                        <span>Coussin</span>
+                                    </div>
+                                    <div class="shape-option eye-shape" data-value="diamond">
+                                        <img src="{{ url_for('static', filename='img/styles/eye_shapes/diamond.png') }}" alt="Losange">
+                                        <span>Losange</span>
                                     </div>
                                 </div>
                             </div>
                             
-                            <div class="form-row">
-                                <div class="form-group full-width">
-                                    <label>Contour des marqueurs</label>
-                                    <div class="shape-selector">
-                                        <div class="shape-option frame-shape selected" data-value="square">
-                                            <img src="{{ url_for('static', filename='img/styles/frame_shapes/square.png') }}" alt="Carré">
-                                            <span>Carré</span>
-                                        </div>
-                                        <div class="shape-option frame-shape" data-value="rounded_square">
-                                            <img src="{{ url_for('static', filename='img/styles/frame_shapes/rounded_square.png') }}" alt="Carré arrondi">
-                                            <span>Carré arrondi</span>
-                                        </div>
-                                        <div class="shape-option frame-shape" data-value="circle">
-                                            <img src="{{ url_for('static', filename='img/styles/frame_shapes/circle.png') }}" alt="Cercle">
-                                            <span>Cercle</span>
-                                        </div>
-                                        <div class="shape-option frame-shape" data-value="rounded">
-                                            <img src="{{ url_for('static', filename='img/styles/frame_shapes/rounded.png') }}" alt="Arrondi">
-                                            <span>Arrondi</span>
-                                        </div>
-                                        <div class="shape-option frame-shape" data-value="diamond">
-                                            <img src="{{ url_for('static', filename='img/styles/frame_shapes/diamond.png') }}" alt="Losange">
-                                            <span>Losange</span>
-                                        </div>
+                            <div class="form-group">
+                                <label>Contour des marqueurs</label>
+                                <div class="shape-selector">
+                                    <div class="shape-option frame-shape selected" data-value="square">
+                                        <img src="{{ url_for('static', filename='img/styles/frame_shapes/square.png') }}" alt="Carré">
+                                        <span>Carré</span>
+                                    </div>
+                                    <div class="shape-option frame-shape" data-value="rounded_square">
+                                        <img src="{{ url_for('static', filename='img/styles/frame_shapes/rounded_square.png') }}" alt="Carré arrondi">
+                                        <span>Carré arrondi</span>
+                                    </div>
+                                    <div class="shape-option frame-shape" data-value="circle">
+                                        <img src="{{ url_for('static', filename='img/styles/frame_shapes/circle.png') }}" alt="Cercle">
+                                        <span>Cercle</span>
+                                    </div>
+                                    <div class="shape-option frame-shape" data-value="rounded">
+                                        <img src="{{ url_for('static', filename='img/styles/frame_shapes/rounded.png') }}" alt="Arrondi">
+                                        <span>Arrondi</span>
+                                    </div>
+                                    <div class="shape-option frame-shape" data-value="diamond">
+                                        <img src="{{ url_for('static', filename='img/styles/frame_shapes/diamond.png') }}" alt="Losange">
+                                        <span>Losange</span>
+                                    </div>
+                                    <div class="shape-option frame-shape" data-value="corner_cut">
+                                        <img src="{{ url_for('static', filename='img/styles/frame_shapes/corner_cut.png') }}" alt="Coins coupés">
+                                        <span>Coins coupés</span>
+                                    </div>
+                                    <div class="shape-option frame-shape" data-value="dots">
+                                        <img src="{{ url_for('static', filename='img/styles/frame_shapes/dots.png') }}" alt="Points">
+                                        <span>Points</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- Onglet Logo -->
+                        <!-- Logo Tab -->
                         <div id="tab-logo" class="tab-content">
                             <div class="form-group">
                                 <label for="qr-data-logo">Contenu du QR code</label>
@@ -225,7 +228,7 @@
                                         <button type="button" id="remove-logo" class="btn btn-outline">Supprimer</button>
                                     </div>
                                 </div>
-                                <p class="hint">Pour un meilleur résultat, utilisez une image avec fond transparent (format PNG) et choisissez un niveau de correction d'erreur élevé.</p>
+                                <p class="hint">Pour un meilleur résultat, utilisez une image avec fond transparent (PNG) et choisissez un niveau de correction d'erreur élevé.</p>
                             </div>
                             
                             <div class="form-group">
@@ -259,7 +262,7 @@
                             </div>
                         </div>
                         
-                        <!-- Onglet Style -->
+                        <!-- Style Tab -->
                         <div id="tab-styled" class="tab-content">
                             <div class="form-group">
                                 <label for="qr-data-styled">Contenu du QR code</label>
@@ -287,9 +290,126 @@
                                     <option value="3">H - 30%</option>
                                 </select>
                             </div>
+                            
+                            <div class="form-group">
+                                <label for="module-drawer">Type de module</label>
+                                <select id="module-drawer" name="module_drawer">
+                                    <option value="square">Carré</option>
+                                    <option value="rounded">Arrondi</option>
+                                    <option value="circle">Cercle</option>
+                                    <option value="gapped_square">Carré espacé</option>
+                                    <option value="vertical_bars">Barres verticales</option>
+                                    <option value="horizontal_bars">Barres horizontales</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="color-mask">Type de coloration</label>
+                                <select id="color-mask" name="color_mask">
+                                    <option value="solid">Couleur unie</option>
+                                    <option value="radial_gradient">Dégradé radial</option>
+                                    <option value="horizontal_gradient">Dégradé horizontal</option>
+                                    <option value="vertical_gradient">Dégradé vertical</option>
+                                    <option value="square_gradient">Dégradé carré</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Solid color options -->
+                            <div id="solid-options" class="color-mask-options">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="front-color">Couleur des modules</label>
+                                        <input type="color" id="front-color" name="front_color" value="#000000">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="back-color">Couleur d'arrière-plan</label>
+                                        <input type="color" id="back-color" name="back_color" value="#FFFFFF">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Gradient options -->
+                            <div id="radial_gradient-options" class="color-mask-options" style="display: none;">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="gradient-start-color">Couleur centrale</label>
+                                        <input type="color" id="gradient-start-color" name="gradient_start_color" value="#0066CC">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="gradient-end-color">Couleur extérieure</label>
+                                        <input type="color" id="gradient-end-color" name="gradient_end_color" value="#003366">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="gradient-back-color">Couleur d'arrière-plan</label>
+                                        <input type="color" id="gradient-back-color" name="gradient_back_color" value="#FFFFFF">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Horizontal gradient options -->
+                            <div id="horizontal_gradient-options" class="color-mask-options" style="display: none;">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="gradient-start-color">Couleur gauche</label>
+                                        <input type="color" id="gradient-start-color" name="gradient_start_color" value="#FF6600">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="gradient-end-color">Couleur droite</label>
+                                        <input type="color" id="gradient-end-color" name="gradient_end_color" value="#CC0000">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="gradient-back-color">Couleur d'arrière-plan</label>
+                                        <input type="color" id="gradient-back-color" name="gradient_back_color" value="#FFFFFF">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Vertical gradient options -->
+                            <div id="vertical_gradient-options" class="color-mask-options" style="display: none;">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="gradient-start-color">Couleur haut</label>
+                                        <input type="color" id="gradient-start-color" name="gradient_start_color" value="#009900">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="gradient-end-color">Couleur bas</label>
+                                        <input type="color" id="gradient-end-color" name="gradient_end_color" value="#003300">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="gradient-back-color">Couleur d'arrière-plan</label>
+                                        <input type="color" id="gradient-back-color" name="gradient_back_color" value="#FFFFFF">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Square gradient options -->
+                            <div id="square_gradient-options" class="color-mask-options" style="display: none;">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="gradient-start-color">Couleur centrale</label>
+                                        <input type="color" id="gradient-start-color" name="gradient_start_color" value="#9900CC">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="gradient-end-color">Couleur extérieure</label>
+                                        <input type="color" id="gradient-end-color" name="gradient_end_color" value="#330066">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="gradient-back-color">Couleur d'arrière-plan</label>
+                                        <input type="color" id="gradient-back-color" name="gradient_back_color" value="#FFFFFF">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         
-                        <!-- Onglet Social -->
+                        <!-- Social Tab -->
                         <div id="tab-social" class="tab-content">
                             <div class="form-group">
                                 <label for="qr-data-social">Contenu du QR code</label>
@@ -352,7 +472,7 @@
                     </form>
                 </div>
 
-                <!-- Panneau de droite - Aperçu et exportation -->
+                <!-- Right panel - Preview and export -->
                 <div class="preview-panel">
                     <div class="preview-container">
                         <h2>Aperçu</h2>
@@ -374,6 +494,13 @@
                             <button type="button" class="export-button btn" data-format="pdf">PDF</button>
                             <button type="button" class="export-button btn" data-format="eps">EPS</button>
                             <button type="button" class="export-button btn btn-primary" data-format="all">Tous les formats</button>
+                        </div>
+                        
+                        <div class="export-format-buttons">
+                            <button type="button" class="export-format-button active" data-format="png">PNG</button>
+                            <button type="button" class="export-format-button" data-format="svg">SVG</button>
+                            <button type="button" class="export-format-button" data-format="pdf">PDF</button>
+                            <button type="button" class="export-format-button" data-format="eps">EPS</button>
                         </div>
                         
                         <div class="export-details">
@@ -400,6 +527,16 @@
                                         </select>
                                     </div>
                                 </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="png-size">Dimensions (px)</label>
+                                        <div class="dimension-inputs">
+                                            <input type="number" id="png-width" name="png_width" value="300" min="50" max="2000">
+                                            <span>×</span>
+                                            <input type="number" id="png-height" name="png_height" value="300" min="50" max="2000">
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                             
                             <div id="svg-options" class="export-format-options" style="display: none;">
@@ -414,6 +551,14 @@
                                         <option value="3">3x</option>
                                     </select>
                                 </div>
+                                <div class="form-group">
+                                    <label for="svg-size">Dimensions (px)</label>
+                                    <div class="dimension-inputs">
+                                        <input type="number" id="svg-width" name="svg_width" value="300" min="50" max="2000">
+                                        <span>×</span>
+                                        <input type="number" id="svg-height" name="svg_height" value="300" min="50" max="2000">
+                                    </div>
+                                </div>
                             </div>
                             
                             <div id="pdf-options" class="export-format-options" style="display: none;">
@@ -425,7 +570,7 @@
                                     </div>
                                     <div class="form-group">
                                         <label for="pdf-author">Auteur</label>
-                                        <input type="text" id="pdf-author" name="pdf_author" value="Anecoop-France">
+                                        <input type="text" id="pdf-author" name="pdf_author" value="QR Code Generator">
                                     </div>
                                 </div>
                                 <div class="form-row">
@@ -435,6 +580,16 @@
                                             <input type="number" id="pdf-width" name="pdf_width" value="50" min="10" max="500">
                                             <span>×</span>
                                             <input type="number" id="pdf-height" name="pdf_height" value="50" min="10" max="500">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="pdf-position">Position (mm depuis le coin inf. gauche)</label>
+                                        <div class="dimension-inputs">
+                                            <input type="number" id="pdf-x" name="pdf_x" value="80" min="0" max="500">
+                                            <span>×</span>
+                                            <input type="number" id="pdf-y" name="pdf_y" value="150" min="0" max="500">
                                         </div>
                                     </div>
                                 </div>
@@ -465,21 +620,20 @@
 
     <footer>
         <div class="container">
-            <p>&copy; {{ now.year }} Anecoop-France - Tous droits réservés</p>
-            <p>Créé par Kevin BIVIA</p>
+            <p>&copy; {{ now.year }} Tous droits réservés</p>
         </div>
     </footer>
 
-    <!-- Messages de notification -->
+    <!-- Notifications -->
     <div id="notification-container">
         <div id="error-container" class="notification error" style="display: none;"></div>
         <div id="success-container" class="notification success" style="display: none;"></div>
     </div>
 
-    <!-- Indicateur de chargement -->
+    <!-- Loading indicator -->
     <div id="loading-indicator" style="display: none;">
         <div class="spinner"></div>
-        <span>Chargement en cours...</span>
+        <span>Traitement en cours...</span>
     </div>
 
     <!-- Scripts -->
