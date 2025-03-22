@@ -188,7 +188,80 @@ footer {
         margin-bottom: 5px;
     }
 }
+/* Styles à ajouter pour les options de forme */
 
+.shape-preview {
+    width: 60px;
+    height: 60px;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    margin: 0 auto 5px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f8f9fa;
+    transition: all 0.2s ease;
+}
+
+.shape-preview img {
+    max-width: 100%;
+    max-height: 100%;
+    padding: 5px;
+    transition: all 0.2s ease;
+}
+
+.shape-name {
+    font-size: 11px;
+    margin-top: 2px;
+    color: #666;
+}
+
+.form-check-input:checked ~ .form-check-label .shape-preview {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px var(--primary-color);
+    background-color: rgba(52, 152, 219, 0.05);
+}
+
+.module-shape-option,
+.frame-shape-option,
+.eye-shape-option {
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.form-check-input {
+    position: absolute;
+    opacity: 0;
+}
+
+.module-shape-option .form-check-label,
+.frame-shape-option .form-check-label,
+.eye-shape-option .form-check-label {
+    cursor: pointer;
+    display: block;
+}
+
+.form-check-input:focus ~ .form-check-label .shape-preview {
+    box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
+}
+
+.form-check-input:checked ~ .form-check-label .shape-name {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+/* Réglages pour les affichages mobiles */
+@media (max-width: 576px) {
+    .shape-preview {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .shape-name {
+        font-size: 10px;
+    }
+}
 /* Animation */
 .fade-in {
     animation: fadeIn 0.5s ease-in-out;
